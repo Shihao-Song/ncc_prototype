@@ -19,9 +19,15 @@ class Model
     class Layer
     {
       public:
+        // TODO, more layer type:
+        // https://towardsdatascience.com/a-comprehensive-introduction-to-different-types-of-convolutions-in-deep-learning-669281e58215
+	// https://medium.com/@zurister/depth-wise-convolution-and-depth-wise-separable-convolution-37346565d4ec
+	// https://machinelearningmastery.com/introduction-to-1x1-convolutions-to-reduce-the-complexity-of-convolutional-neural-networks/
         enum class Layer_Type : int
         {
+            Input, // the input layer
             Conv2D, // convolution layer
+            MaxPooling2D, // max polling layer
             Flatten, // flatten layer
             Dense, // dense (fully-connected) layer
             MAX
@@ -45,12 +51,25 @@ class Model
             b_dims = _b_dims;
             bias = _bias;
         }
-        
+        void setStrides(std::vector<unsigned> &_strides)
+        {
+            strides = _strides;
+        }
+        void setOutputDim(std::vector<unsigned> &_dims)
+        {
+            output_dims = _dims;
+        }
+
         std::string name; // Name of the layer
 	std::vector<unsigned> w_dims; // dims of the weights
         std::vector<float> weights; // all the weight
         std::vector<unsigned> b_dims; // dims of the bias
         std::vector<float> bias; // all the bias
+
+        std::vector<unsigned> strides;
+
+        std::vector<unsigned> output_dims; // dimension of output
+        std::vector<uint64_t> output_neuron_ids;
     };
 
     // Model - Architecture
@@ -77,7 +96,7 @@ class Model
             exit(0);
         }
 
-        void printLayers()
+        void printLayers() // Only used for small network debuggings.
         {
             for (auto &layer : layers)
             {
@@ -85,9 +104,10 @@ class Model
                 auto type = layer.getLayerType();
 
                 std::cout << "Layer name: " << name << "; ";
-                if (type == Layer::Layer_Type::Conv2D) { std::cout << "Layer type: Conv2D\n"; }
-                else if(type == Layer::Layer_Type::Flatten) { std::cout << "Layer type: Flatten\n"; }
-                else if(type == Layer::Layer_Type::Dense) { std::cout << "Layer type: Dense\n"; }
+                if (type == Layer::Layer_Type::Conv2D) { std::cout << "Layer type: Conv2D"; }
+                else if(type == Layer::Layer_Type::Flatten) { std::cout << "Layer type: Flatten"; }
+                else if(type == Layer::Layer_Type::Dense) { std::cout << "Layer type: Dense"; }
+                std::cout << "\n";
 
                 std::cout << "Dimension: ";
                 auto &w_dims = layer.w_dims;
@@ -106,6 +126,33 @@ class Model
                     }
                     i++;
                 }
+
+                auto &strides = layer.strides;
+                std::cout << "Strides: ";
+                for (auto stride : strides) { std::cout << stride << " "; }
+                std::cout << "\n";
+
+                auto &output_dims = layer.output_dims;
+                std::cout << "Output shape: ";
+                for (auto dim : output_dims) { std::cout << dim << " "; }
+                std::cout << "\n";
+
+                auto &out_neuro_ids = layer.output_neuron_ids;
+                std::cout << "Output neuron id: ";
+                std::cout << "\n";
+                for (int k = 0; k < output_dims[2]; k++)
+                {
+                    for (int i = 0; i < output_dims[0]; i++)
+                    {
+                        for (int j = 0; j < output_dims[1]; j++)
+                        {
+                            std::cout << out_neuro_ids[k * output_dims[0] * output_dims[1] + 
+                                                       i * output_dims[1] + j] << " ";
+                        }
+                        std::cout << "\n";
+                    }
+                    std::cout << "\n";
+                }
                 std::cout << "\n";
                 exit(0);
             }
@@ -122,6 +169,8 @@ class Model
     }
 
     void printLayers() { arch.printLayers(); }
+
+    void 
 
   protected:
     void loadArch(std::string &arch_file);

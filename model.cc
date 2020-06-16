@@ -18,9 +18,44 @@ void Model::loadArch(std::string &arch_file)
         boost::property_tree::ptree pt;
         boost::property_tree::read_json(arch_file, pt);
 
+        unsigned layer_counter = 0;
         // Iterate through the layers
         BOOST_FOREACH(boost::property_tree::ptree::value_type &v, pt.get_child("config.layers"))
         {
+            // We need to construct the input layer first
+            if (layer_counter == 0)
+            {
+                std::vector<std::string> input_shape;
+                std::vector<unsigned> output_dims;
+                for (boost::property_tree::ptree::value_type &cell : v.second.get_child("config.batch_input_shape"))
+                {
+                    input_shape.push_back(cell.second.get_value<std::string>());
+                }
+
+                input_shape.erase(input_shape.begin());
+                for (auto dim : input_shape) { output_dims.push_back(stoll(dim)); }
+
+                std::string name = "input";
+                Layer::Layer_Type layer_type = Layer::Layer_Type::Input;
+                arch.addLayer(name, layer_type);
+                arch.getLayer(name).setOutputDim(output_dims);
+
+                auto &out_neuro_ids = arch.getLayer(name).output_neuron_ids;
+                for (int k = 0; k < output_dims[2]; k++)
+                {
+                    for (int i = 0; i < output_dims[0]; i++)
+                    {
+                        for (int j = 0; j < output_dims[1]; j++)
+                        {
+                            out_neuro_ids.push_back(k * output_dims[0] * output_dims[1] + 
+                                                    i * output_dims[1] + j);
+                        }
+                    }
+                }
+
+                layer_counter++;
+            }
+
             std::string class_name = v.second.get<std::string>("class_name");
             std::string name = v.second.get<std::string>("config.name");
 
@@ -31,6 +66,21 @@ void Model::loadArch(std::string &arch_file)
             else { std::cerr << "Error: Unsupported layer type.\n"; exit(0); }
 
             arch.addLayer(name, layer_type);
+
+            if (class_name == "Conv2D")
+            {
+                std::vector<std::string> strides_str;
+                std::vector<unsigned> strides;
+                for (boost::property_tree::ptree::value_type &cell : v.second.get_child("config.strides"))
+                {
+                    strides_str.push_back(cell.second.get_value<std::string>());
+                }
+  
+                for (auto stride : strides_str) { strides.push_back(stoll(stride)); }
+                arch.getLayer(name).setStrides(strides);
+            }
+
+            layer_counter++;
         }
     }
     catch (std::exception const& e)
