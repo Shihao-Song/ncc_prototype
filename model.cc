@@ -11,6 +11,79 @@ namespace NCC
 {
 namespace NCC_FrontEnd
 {
+void Model::Architecture::connector()
+{
+    for (int i = 0; i < layers.size() - 1; i++)
+    {
+        if (layers[i + 1].layer_type == Layer::Layer_Type::Conv2D)
+        {
+            connToConv(i, i + 1);
+        }
+    }
+}
+
+void Model::Architecture::connToConv(unsigned cur_layer_id, unsigned next_layer_id)
+{
+    auto &cur_neurons_dims = layers[cur_layer_id].output_dims;
+    auto &cur_neurons_ids = layers[cur_layer_id].output_neuron_ids;
+
+    auto &conv_kernel_dims = layers[next_layer_id].w_dims;
+    auto &conv_kernel_weights = layers[next_layer_id].weights;
+    auto &conv_strides = layers[next_layer_id].strides;
+    auto &conv_output_dims = layers[next_layer_id].output_dims;
+    auto &conv_output_neuron_ids = layers[next_layer_id].output_neuron_ids;
+
+    uint64_t conv_neuron_id_track = cur_neurons_ids[cur_neurons_ids.size() - 1] + 1;
+    // std::cout << conv_neuron_id_track << "\n";
+
+    unsigned conv_output_dims_x = 0;
+    unsigned conv_output_dims_y = 0;
+    // For each filter
+    for (int filter = 0; filter < conv_kernel_dims[3]; filter++)
+    {
+        conv_output_dims_x = 0;
+        for (int row = conv_kernel_dims[0] - 1; row < cur_neurons_dims[0]; row += conv_strides[1])
+        {
+            conv_output_dims_x++;
+
+            conv_output_dims_y = 0;
+            for (int col = conv_kernel_dims[1] - 1; col < cur_neurons_dims[1]; col += conv_strides[0])
+            {
+                conv_output_dims_y++;
+
+                // All neurons inside the current kernel
+                int starting_row = row + 1 - conv_kernel_dims[0];
+                int ending_row = row;
+                int starting_col = col + 1 - conv_kernel_dims[1];
+                int ending_col = col;
+
+		// std::cout << starting_row << " " << ending_row << " " << starting_col << " " << ending_col << "\n";
+                for (int k = 0; k < cur_neurons_dims[2]; k++)
+                {
+                    for (int i = starting_row; i <= ending_row; i++)
+                    {
+                        for (int j = starting_col; j <= ending_col; j++)
+                        {
+                            uint64_t cur_neuron_id = k * cur_neurons_dims[0] * cur_neurons_dims[1] +
+                                                     i * cur_neurons_dims[1] + j;
+
+                            std::cout << cur_neuron_id << " ";
+                        }
+                    }
+                }
+                std::cout << "-> " << conv_neuron_id_track << "\n";
+                conv_output_neuron_ids.push_back(conv_neuron_id_track);
+                conv_neuron_id_track++;
+                // std::cout << "\n";
+            }
+        }
+    }
+
+    conv_output_dims.push_back(conv_output_dims_x);
+    conv_output_dims.push_back(conv_output_dims_y);
+    conv_output_dims.push_back(conv_kernel_dims[3]);
+}
+
 void Model::loadArch(std::string &arch_file)
 {
     try

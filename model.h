@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <string>
+#include <unordered_map>
 #include <utility>      // std::pair
 #include <vector>
 
@@ -36,8 +37,8 @@ class Model
         Layer() {}
         Layer(std::string &_name, Layer_Type &_type) : name(_name), layer_type(_type) {}
 
-        std::string& getName() { return name; }
-        Layer_Type& getLayerType() { return layer_type; }
+        // std::string& getName() { return name; }
+        // Layer_Type& getLayerType() { return layer_type; }
 
         void setWeights(std::vector<unsigned> &_w_dims,
                         std::vector<float> &_weights)
@@ -78,6 +79,9 @@ class Model
       protected:
         std::vector<Layer> layers;
 
+      protected:
+        void connToConv(unsigned, unsigned);
+
       public:
         Architecture() {}
 
@@ -90,18 +94,20 @@ class Model
         {
             for (auto &layer : layers)
             {
-                if (layer.getName() == name) { return layer; }
+                if (layer.name == name) { return layer; }
             }
             std::cerr << "Error: layer is not found.\n";
             exit(0);
         }
 
+        void connector();
+
         void printLayers() // Only used for small network debuggings.
         {
             for (auto &layer : layers)
             {
-                auto name = layer.getName();
-                auto type = layer.getLayerType();
+                auto name = layer.name;
+                auto type = layer.layer_type;
 
                 std::cout << "Layer name: " << name << "; ";
                 if (type == Layer::Layer_Type::Conv2D) { std::cout << "Layer type: Conv2D"; }
@@ -137,6 +143,7 @@ class Model
                 for (auto dim : output_dims) { std::cout << dim << " "; }
                 std::cout << "\n";
 
+                
                 auto &out_neuro_ids = layer.output_neuron_ids;
                 std::cout << "Output neuron id: ";
                 std::cout << "\n";
@@ -153,8 +160,9 @@ class Model
                     }
                     std::cout << "\n";
                 }
+		
                 std::cout << "\n";
-                exit(0);
+                // exit(0);
             }
         }
     };
@@ -170,7 +178,14 @@ class Model
 
     void printLayers() { arch.printLayers(); }
 
-    void 
+    struct ConnEntry
+    {
+        std::vector<uint64_t> out_neuron_id;
+        std::vector<float> weights;
+    };
+    std::unordered_map<uint64_t, ConnEntry> connections;
+
+    void connector() { arch.connector(); } 
 
   protected:
     void loadArch(std::string &arch_file);
