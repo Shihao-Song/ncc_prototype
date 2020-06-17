@@ -19,6 +19,10 @@ void Model::Architecture::connector()
         {
             connToConv(i, i + 1);
         }
+        if (layers[i + 1].layer_type == Layer::Layer_Type::MaxPooling2D)
+        {
+            connToPool(i, i + 1);
+        }
     }
 }
 
@@ -64,15 +68,27 @@ void Model::Architecture::connToConv(unsigned cur_layer_id, unsigned next_layer_
                     {
                         for (int j = starting_col; j <= ending_col; j++)
                         {
-                            uint64_t cur_neuron_id = k * cur_neurons_dims[0] * cur_neurons_dims[1] +
-                                                     i * cur_neurons_dims[1] + j;
+                            uint64_t cur_neuron_id = cur_neurons_ids[k * cur_neurons_dims[0] * cur_neurons_dims[1] +
+                                                                     i * cur_neurons_dims[1] + j];
 
                             float weight = 
-                            conv_kernel_weights[i % conv_kernel_dims[0] *  conv_kernel_dims[1] * conv_kernel_dims[2] * conv_kernel_dims[3]
-                                                + j % conv_kernel_dims[1] * conv_kernel_dims[2] * conv_kernel_dims[3]
+                            conv_kernel_weights[(i - starting_row) *  conv_kernel_dims[1] * conv_kernel_dims[2] * conv_kernel_dims[3]
+                                                + (j - starting_col) * conv_kernel_dims[2] * conv_kernel_dims[3]
                                                 + k * conv_kernel_dims[3] + filter];
 
-                            std::cout << cur_neuron_id << "(" << weight << ") ";
+                            // Record the connection information
+                            if (auto iter = connections.find(cur_neuron_id);
+                                     iter != connections.end())
+                            {
+                                (*iter).second.out_neurons_ids.push_back(conv_neuron_id_track);
+                                (*iter).second.weights.push_back(weight);
+                            }
+                            else
+                            {
+                                connections.insert({cur_neuron_id, {conv_neuron_id_track, weight}});
+                            }
+
+                            std::cout << cur_neuron_id << " ";
                         }
                     }
                 }
@@ -83,10 +99,112 @@ void Model::Architecture::connToConv(unsigned cur_layer_id, unsigned next_layer_
             }
         }
     }
-
+    std::cout << "\n";
     conv_output_dims.push_back(conv_output_dims_x);
     conv_output_dims.push_back(conv_output_dims_y);
     conv_output_dims.push_back(conv_kernel_dims[3]);
+}
+
+void Model::Architecture::connToPool(unsigned cur_layer_id, unsigned next_layer_id)
+{
+    auto &cur_neurons_dims = layers[cur_layer_id].output_dims;
+    auto &cur_neurons_ids = layers[cur_layer_id].output_neuron_ids;
+
+    auto &pool_kernel_dims = layers[next_layer_id].w_dims;
+    auto &pool_strides = layers[next_layer_id].strides;
+    auto &pool_output_dims = layers[next_layer_id].output_dims;
+    auto &pool_output_neuron_ids = layers[next_layer_id].output_neuron_ids;
+
+    uint64_t pool_neuron_id_track = cur_neurons_ids[cur_neurons_ids.size() - 1] + 1;
+    // std::cout << conv_neuron_id_track << "\n";
+
+    unsigned pool_output_dims_x = 0;
+    unsigned pool_output_dims_y = 0;
+
+    pool_kernel_dims.push_back(cur_neurons_dims[2]); // Number of filters equals to that of the prev. layer.
+
+    // For each filter
+    for (int filter = 0; filter < pool_kernel_dims[3]; filter++)
+    {
+        pool_output_dims_x = 0;
+        for (int row = pool_kernel_dims[0] - 1; row < cur_neurons_dims[0]; row += pool_strides[1])
+        {
+            pool_output_dims_x++;
+
+            pool_output_dims_y = 0;
+            for (int col = pool_kernel_dims[1] - 1; col < cur_neurons_dims[1]; col += pool_strides[0])
+            {
+                pool_output_dims_y++;
+
+                // All neurons inside the current kernel
+                int starting_row = row + 1 - pool_kernel_dims[0];
+                int ending_row = row;
+                int starting_col = col + 1 - pool_kernel_dims[1];
+                int ending_col = col;
+
+                for (int i = starting_row; i <= ending_row; i++)
+                {
+                    for (int j = starting_col; j <= ending_col; j++)
+                    {
+                        uint64_t cur_neuron_id = cur_neurons_ids[filter * cur_neurons_dims[0] * cur_neurons_dims[1] +
+                                                                 i * cur_neurons_dims[1] + j];
+
+                        // Record the connection information
+                        if (auto iter = connections.find(cur_neuron_id);
+                                 iter != connections.end())
+                        {
+                            (*iter).second.out_neurons_ids.push_back(pool_neuron_id_track);
+                            (*iter).second.weights.push_back(-1);
+                        }
+                        else
+                        {
+                            connections.insert({cur_neuron_id, {pool_neuron_id_track, -1}});
+                        }
+
+                        std::cout << cur_neuron_id << " ";
+                    }
+                }
+                std::cout << "-> " << pool_neuron_id_track << "\n";
+                pool_output_neuron_ids.push_back(pool_neuron_id_track);
+                pool_neuron_id_track++;
+                // std::cout << "\n";
+            }
+        }
+    }
+
+    pool_output_dims.push_back(pool_output_dims_x);
+    pool_output_dims.push_back(pool_output_dims_y);
+    pool_output_dims.push_back(pool_kernel_dims[3]);
+}
+
+void Model::Architecture::printConns()
+{
+    for (int i = 0; i < layers.size() - 1; i++)
+    {
+        auto &output_neurons = layers[i].output_neuron_ids;
+
+        for (auto neuron : output_neurons)
+        {
+            std::cout << "Input neuron id: " << neuron << "\n";
+            std::cout << "Output neuron id: ";
+
+            auto iter = connections.find(neuron);
+            assert(iter != connections.end());
+            auto &out_neurons_ids = (*iter).second.out_neurons_ids;
+            auto &weights = (*iter).second.weights;
+
+            for (auto out_id : out_neurons_ids)
+            {
+                std::cout << out_id << " ";
+            }
+            std::cout << "\nWeights: ";
+            for (auto weight : weights)
+            {
+                std::cout << weight << " ";
+            }
+            std::cout << "\n\n";
+        }
+    }
 }
 
 void Model::loadArch(std::string &arch_file)
@@ -139,13 +257,14 @@ void Model::loadArch(std::string &arch_file)
 
             Layer::Layer_Type layer_type = Layer::Layer_Type::MAX;
             if (class_name == "Conv2D") { layer_type = Layer::Layer_Type::Conv2D; }
+            else if (class_name == "MaxPooling2D") { layer_type = Layer::Layer_Type::MaxPooling2D; }
             else if (class_name == "Flatten") { layer_type = Layer::Layer_Type::Flatten; }
             else if (class_name == "Dense") { layer_type = Layer::Layer_Type::Dense; }
             else { std::cerr << "Error: Unsupported layer type.\n"; exit(0); }
 
             arch.addLayer(name, layer_type);
 
-            if (class_name == "Conv2D")
+            if (class_name == "Conv2D" || class_name == "MaxPooling2D")
             {
                 std::vector<std::string> strides_str;
                 std::vector<unsigned> strides;
@@ -156,6 +275,20 @@ void Model::loadArch(std::string &arch_file)
   
                 for (auto stride : strides_str) { strides.push_back(stoll(stride)); }
                 arch.getLayer(name).setStrides(strides);
+            }
+
+            if (class_name == "MaxPooling2D")
+            {
+                // We need pool_size since Conv2D's kernel size can be extracted from h5 file
+                std::vector<std::string> pool_size_str;
+                auto &pool_size = arch.getLayer(name).w_dims;
+                for (boost::property_tree::ptree::value_type &cell : v.second.get_child("config.pool_size"))
+                {
+                    pool_size_str.push_back(cell.second.get_value<std::string>());
+                }
+
+                for (auto size : pool_size_str) { pool_size.push_back(stoll(size)); }
+                pool_size.push_back(1); // depth is 1
             }
 
             layer_counter++;

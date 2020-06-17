@@ -80,7 +80,21 @@ class Model
         std::vector<Layer> layers;
 
       protected:
+        struct ConnEntry
+        {
+            ConnEntry(uint64_t _id, float _w)
+            {
+                out_neurons_ids.push_back(_id);
+                weights.push_back(_w);
+            }
+
+            std::vector<uint64_t> out_neurons_ids;
+            std::vector<float> weights;
+        };
+        std::unordered_map<uint64_t, ConnEntry> connections;
+
         void connToConv(unsigned, unsigned);
+        void connToPool(unsigned, unsigned);
 
       public:
         Architecture() {}
@@ -102,6 +116,8 @@ class Model
 
         void connector();
 
+        void printConns();
+
         void printLayers() // Only used for small network debuggings.
         {
             for (auto &layer : layers)
@@ -114,7 +130,7 @@ class Model
                 else if(type == Layer::Layer_Type::Flatten) { std::cout << "Layer type: Flatten"; }
                 else if(type == Layer::Layer_Type::Dense) { std::cout << "Layer type: Dense"; }
                 std::cout << "\n";
-
+/*
                 std::cout << "Dimension: ";
                 auto &w_dims = layer.w_dims;
                 auto &weights = layer.weights;
@@ -132,7 +148,7 @@ class Model
                     }
                     i++;
                 }
-
+*/
                 auto &strides = layer.strides;
                 std::cout << "Strides: ";
                 for (auto stride : strides) { std::cout << stride << " "; }
@@ -143,7 +159,6 @@ class Model
                 for (auto dim : output_dims) { std::cout << dim << " "; }
                 std::cout << "\n";
 
-                
                 auto &out_neuro_ids = layer.output_neuron_ids;
                 std::cout << "Output neuron id: ";
                 std::cout << "\n";
@@ -178,14 +193,9 @@ class Model
 
     void printLayers() { arch.printLayers(); }
 
-    struct ConnEntry
-    {
-        std::vector<uint64_t> out_neuron_id;
-        std::vector<float> weights;
-    };
-    std::unordered_map<uint64_t, ConnEntry> connections;
-
     void connector() { arch.connector(); } 
+
+    void printConns() { arch.printConns(); }
 
   protected:
     void loadArch(std::string &arch_file);

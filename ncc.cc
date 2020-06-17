@@ -8,5 +8,7 @@ int main()
     model.connector();
     std::cout << "\n";
     model.printLayers();
+    std::cout << "\n";
+    //model.printConns();
 }
 
