@@ -67,7 +67,12 @@ void Model::Architecture::connToConv(unsigned cur_layer_id, unsigned next_layer_
                             uint64_t cur_neuron_id = k * cur_neurons_dims[0] * cur_neurons_dims[1] +
                                                      i * cur_neurons_dims[1] + j;
 
-                            std::cout << cur_neuron_id << " ";
+                            float weight = 
+                            conv_kernel_weights[i % conv_kernel_dims[0] *  conv_kernel_dims[1] * conv_kernel_dims[2] * conv_kernel_dims[3]
+                                                + j % conv_kernel_dims[1] * conv_kernel_dims[2] * conv_kernel_dims[3]
+                                                + k * conv_kernel_dims[3] + filter];
+
+                            std::cout << cur_neuron_id << "(" << weight << ") ";
                         }
                     }
                 }
