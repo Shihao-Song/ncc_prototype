@@ -19,9 +19,18 @@ void Model::Architecture::connector()
         {
             connToConv(i, i + 1);
         }
-        if (layers[i + 1].layer_type == Layer::Layer_Type::MaxPooling2D)
+        if (layers[i + 1].layer_type == Layer::Layer_Type::MaxPooling2D || 
+            layers[i + 1].layer_type == Layer::Layer_Type::AveragePooling2D)
         {
             connToPool(i, i + 1);
+        }
+        if (layers[i + 1].layer_type == Layer::Layer_Type::Flatten)
+        {
+            connToFlat(i, i + 1);
+        }
+        if (layers[i + 1].layer_type == Layer::Layer_Type::Dense)
+        {
+            connToDense(i, i + 1);
         }
     }
 }
@@ -88,18 +97,18 @@ void Model::Architecture::connToConv(unsigned cur_layer_id, unsigned next_layer_
                                 connections.insert({cur_neuron_id, {conv_neuron_id_track, weight}});
                             }
 
-                            std::cout << cur_neuron_id << " ";
+                            // std::cout << cur_neuron_id << " ";
                         }
                     }
                 }
-                std::cout << "-> " << conv_neuron_id_track << "\n";
+                // std::cout << "-> " << conv_neuron_id_track << "\n";
                 conv_output_neuron_ids.push_back(conv_neuron_id_track);
                 conv_neuron_id_track++;
                 // std::cout << "\n";
             }
         }
     }
-    std::cout << "\n";
+    // std::cout << "\n";
     conv_output_dims.push_back(conv_output_dims_x);
     conv_output_dims.push_back(conv_output_dims_y);
     conv_output_dims.push_back(conv_kernel_dims[3]);
@@ -161,10 +170,10 @@ void Model::Architecture::connToPool(unsigned cur_layer_id, unsigned next_layer_
                             connections.insert({cur_neuron_id, {pool_neuron_id_track, -1}});
                         }
 
-                        std::cout << cur_neuron_id << " ";
+                        // std::cout << cur_neuron_id << " ";
                     }
                 }
-                std::cout << "-> " << pool_neuron_id_track << "\n";
+                // std::cout << "-> " << pool_neuron_id_track << "\n";
                 pool_output_neuron_ids.push_back(pool_neuron_id_track);
                 pool_neuron_id_track++;
                 // std::cout << "\n";
@@ -172,9 +181,95 @@ void Model::Architecture::connToPool(unsigned cur_layer_id, unsigned next_layer_
         }
     }
 
+    // std::cout << "\n";
     pool_output_dims.push_back(pool_output_dims_x);
     pool_output_dims.push_back(pool_output_dims_y);
     pool_output_dims.push_back(pool_kernel_dims[3]);
+}
+
+void Model::Architecture::connToFlat(unsigned cur_layer_id, unsigned next_layer_id)
+{
+    auto &cur_neurons_dims = layers[cur_layer_id].output_dims;
+    auto &cur_neurons_ids = layers[cur_layer_id].output_neuron_ids;
+
+    auto &output_dims = layers[next_layer_id].output_dims;
+    auto &output_neuron_ids = layers[next_layer_id].output_neuron_ids;
+
+    uint64_t out_neuron_id_track = cur_neurons_ids[cur_neurons_ids.size() - 1] + 1;
+
+    uint64_t data_dim = 1;
+    for (auto dim : cur_neurons_dims) { data_dim *= dim; }
+
+    output_dims.push_back(data_dim);
+    output_dims.push_back(1);
+    output_dims.push_back(1);
+
+    for (uint64_t i = 0; i < data_dim; i++)
+    {
+        uint64_t cur_neuron_id = cur_neurons_ids[i];
+        if (auto iter = connections.find(cur_neuron_id);
+               iter != connections.end())
+        {
+            (*iter).second.out_neurons_ids.push_back(out_neuron_id_track);
+            (*iter).second.weights.push_back(-1);
+        }
+        else
+        {
+            connections.insert({cur_neuron_id, {out_neuron_id_track, -1}});
+        }
+
+        // std::cout << cur_neuron_id << " -> " << out_neuron_id_track << "\n";
+        output_neuron_ids.push_back(out_neuron_id_track);
+        out_neuron_id_track++;
+    }
+
+    // std::cout << "\n";
+}
+
+void Model::Architecture::connToDense(unsigned cur_layer_id, unsigned next_layer_id)
+{
+    auto &cur_neurons_dims = layers[cur_layer_id].output_dims;
+    auto &cur_neurons_ids = layers[cur_layer_id].output_neuron_ids;
+
+    auto &dense_dims = layers[next_layer_id].w_dims;
+    auto &dense_weights = layers[next_layer_id].weights;
+    auto &output_dims = layers[next_layer_id].output_dims;
+    auto &output_neuron_ids = layers[next_layer_id].output_neuron_ids;
+
+    uint64_t out_neuron_id_track = cur_neurons_ids[cur_neurons_ids.size() - 1] + 1;
+
+    uint64_t data_dim = 1;
+    for (auto dim : cur_neurons_dims) { data_dim *= dim; }
+
+    output_dims.push_back(dense_dims[1]);
+    output_dims.push_back(1);
+    output_dims.push_back(1);
+
+    for (uint64_t i = 0; i < dense_dims[1]; i++)
+    {
+        for (uint64_t j = 0; j < dense_dims[0]; j++)
+        {
+            uint64_t cur_neuron_id = cur_neurons_ids[j];
+            float weight = dense_weights[j * dense_dims[1] + i];
+
+            if (auto iter = connections.find(cur_neuron_id);
+                   iter != connections.end())
+            {
+                (*iter).second.out_neurons_ids.push_back(out_neuron_id_track);
+                (*iter).second.weights.push_back(weight);
+            }
+            else
+            {
+                connections.insert({cur_neuron_id, {out_neuron_id_track, weight}});
+            }
+            // std::cout << cur_neuron_id << " ";
+        }
+        // std::cout << "-> " << out_neuron_id_track << "\n";
+        output_neuron_ids.push_back(out_neuron_id_track);
+        out_neuron_id_track++;
+    }
+
+    // std::cout << "\n";
 }
 
 void Model::Architecture::printConns()
@@ -258,13 +353,14 @@ void Model::loadArch(std::string &arch_file)
             Layer::Layer_Type layer_type = Layer::Layer_Type::MAX;
             if (class_name == "Conv2D") { layer_type = Layer::Layer_Type::Conv2D; }
             else if (class_name == "MaxPooling2D") { layer_type = Layer::Layer_Type::MaxPooling2D; }
+            else if (class_name == "AveragePooling2D") { layer_type = Layer::Layer_Type::AveragePooling2D; }
             else if (class_name == "Flatten") { layer_type = Layer::Layer_Type::Flatten; }
             else if (class_name == "Dense") { layer_type = Layer::Layer_Type::Dense; }
             else { std::cerr << "Error: Unsupported layer type.\n"; exit(0); }
 
             arch.addLayer(name, layer_type);
 
-            if (class_name == "Conv2D" || class_name == "MaxPooling2D")
+            if (class_name == "Conv2D" || class_name == "MaxPooling2D" || class_name == "AveragePooling2D")
             {
                 std::vector<std::string> strides_str;
                 std::vector<unsigned> strides;
@@ -277,7 +373,7 @@ void Model::loadArch(std::string &arch_file)
                 arch.getLayer(name).setStrides(strides);
             }
 
-            if (class_name == "MaxPooling2D")
+            if (class_name == "MaxPooling2D" || class_name == "AveragePooling2D")
             {
                 // We need pool_size since Conv2D's kernel size can be extracted from h5 file
                 std::vector<std::string> pool_size_str;

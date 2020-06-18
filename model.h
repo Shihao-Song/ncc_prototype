@@ -29,6 +29,7 @@ class Model
             Input, // the input layer
             Conv2D, // convolution layer
             MaxPooling2D, // max polling layer
+            AveragePooling2D,
             Flatten, // flatten layer
             Dense, // dense (fully-connected) layer
             MAX
@@ -95,6 +96,8 @@ class Model
 
         void connToConv(unsigned, unsigned);
         void connToPool(unsigned, unsigned);
+        void connToFlat(unsigned, unsigned);
+        void connToDense(unsigned, unsigned);
 
       public:
         Architecture() {}
@@ -127,6 +130,8 @@ class Model
 
                 std::cout << "Layer name: " << name << "; ";
                 if (type == Layer::Layer_Type::Conv2D) { std::cout << "Layer type: Conv2D"; }
+                else if(type == Layer::Layer_Type::MaxPooling2D) { std::cout << "Layer type: MaxPooling2D"; }
+                else if(type == Layer::Layer_Type::AveragePooling2D) { std::cout << "Layer type: AveragePooling2D"; }
                 else if(type == Layer::Layer_Type::Flatten) { std::cout << "Layer type: Flatten"; }
                 else if(type == Layer::Layer_Type::Dense) { std::cout << "Layer type: Dense"; }
                 std::cout << "\n";
@@ -148,17 +153,17 @@ class Model
                     }
                     i++;
                 }
-*/
+
                 auto &strides = layer.strides;
                 std::cout << "Strides: ";
                 for (auto stride : strides) { std::cout << stride << " "; }
                 std::cout << "\n";
-
+*/
                 auto &output_dims = layer.output_dims;
                 std::cout << "Output shape: ";
                 for (auto dim : output_dims) { std::cout << dim << " "; }
-                std::cout << "\n";
-
+                std::cout << "\n\n";
+/*
                 auto &out_neuro_ids = layer.output_neuron_ids;
                 std::cout << "Output neuron id: ";
                 std::cout << "\n";
@@ -178,6 +183,7 @@ class Model
 		
                 std::cout << "\n";
                 // exit(0);
+*/
             }
         }
     };
