@@ -119,7 +119,7 @@ class Model
 
         void connector();
 
-        void printConns(std::string &out_file);
+        void printConns(std::string &out_root);
 
         void printLayers() // Only used for small network debuggings.
         {
@@ -201,7 +201,7 @@ class Model
 
     void connector() { arch.connector(); } 
 
-    void printConns(std::string &out_file) { arch.printConns(out_file); }
+    void printConns(std::string &out_root) { arch.printConns(out_root); }
 
   protected:
     void loadArch(std::string &arch_file);

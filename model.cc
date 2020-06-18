@@ -8,6 +8,8 @@
 #include <fstream>
 #include <sstream>
 
+#include "protobuf/proto_graph/graph.pb.h"
+
 namespace NCC
 {
 namespace NCC_FrontEnd
@@ -273,9 +275,16 @@ void Model::Architecture::connToDense(unsigned cur_layer_id, unsigned next_layer
     // std::cout << "\n";
 }
 
-void Model::Architecture::printConns(std::string &out_file)
+void Model::Architecture::printConns(std::string &out_root)
 {
-    std::ofstream out(out_file);
+    GOOGLE_PROTOBUF_VERIFY_VERSION;
+    NCC_Graph_Proto::Graph graph;
+    NCC_Graph_Proto::Node *node;
+
+    std::string txt = out_root + ".connection_info.txt";
+    std::string proto = out_root + ".graph";
+
+    std::ofstream out(txt);
 
     for (int i = 0; i < layers.size() - 1; i++)
     {
@@ -286,8 +295,14 @@ void Model::Architecture::printConns(std::string &out_file)
             
             auto iter = connections.find(neuron);
             if (iter == connections.end()) { continue; }
-            out << "Input neuron id: " << neuron << "\n";
-            out << "Output neuron id: ";
+
+            node = graph.add_nodes();
+            node->set_id(neuron);
+            node->set_type(NCC_Graph_Proto::Node::IO); 
+
+            // out << "Input neuron id: " << neuron << "\n";
+            // out << "Output neuron id: ";
+            out << neuron << "\n";
 
             auto &out_neurons_ids = (*iter).second.out_neurons_ids;
             auto &weights = (*iter).second.weights;
@@ -295,16 +310,29 @@ void Model::Architecture::printConns(std::string &out_file)
             for (auto out_id : out_neurons_ids)
             {
                 out << out_id << " ";
+                node->add_adjs(out_id);
             }
-            out << "\nWeights: ";
+            out << "\n";
+            // out << "\nWeights: ";
             for (auto weight : weights)
             {
                 out << weight << " ";
+                node->add_weights(weight);
             }
             out << "\n\n";
         }
     }
     out.close();
+
+    std::fstream proto_out(proto, std::ios::out | std::ios::trunc | std::ios::binary);
+    if (!graph.SerializeToOstream(&proto_out))
+    {
+        std::cerr << "Failed to graph." << std::endl;
+        exit(0);
+    }
+
+    google::protobuf::ShutdownProtobufLibrary();
+
 }
 
 void Model::loadArch(std::string &arch_file)

@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package NCC_Graph_Proto;
+
+message Node
+{
+    enum NeuronType
+    {
+        IO = 0;
+        BIAS = 1;
+    }
+
+    uint64 id = 1; // Unique neuron ID
+    NeuronType type = 2; // Type of the neuron
+    repeated uint64 adjs = 3; // All its adjacent neurons
+    repeated double weights = 4; // All the weights (one weight correspond to one adjacent neuron)
+}
+
+message Graph
+{
+    repeated Node nodes = 1;
+}
