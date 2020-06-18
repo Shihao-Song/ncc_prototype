@@ -62,6 +62,12 @@ class Model
             output_dims = _dims;
         }
 
+        enum class Padding_Type : int
+        {
+            same,
+            valid
+        }padding_type = Padding_Type::valid;
+
         std::string name; // Name of the layer
 	std::vector<unsigned> w_dims; // dims of the weights
         std::vector<float> weights; // all the weight
@@ -95,6 +101,7 @@ class Model
         std::unordered_map<uint64_t, ConnEntry> connections;
 
         void connToConv(unsigned, unsigned);
+        void connToConvPadding(unsigned, unsigned);
         void connToPool(unsigned, unsigned);
         void connToFlat(unsigned, unsigned);
         void connToDense(unsigned, unsigned);

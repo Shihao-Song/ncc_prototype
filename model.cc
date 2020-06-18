@@ -20,7 +20,14 @@ void Model::Architecture::connector()
     {
         if (layers[i + 1].layer_type == Layer::Layer_Type::Conv2D)
         {
-            connToConv(i, i + 1);
+            if (layers[i + 1].padding_type == Layer::Padding_Type::same)
+            {
+                connToConvPadding(i, i + 1);
+            }
+            else
+            {
+                connToConv(i, i + 1);
+            }
         }
         if (layers[i + 1].layer_type == Layer::Layer_Type::MaxPooling2D || 
             layers[i + 1].layer_type == Layer::Layer_Type::AveragePooling2D)
@@ -58,12 +65,12 @@ void Model::Architecture::connToConv(unsigned cur_layer_id, unsigned next_layer_
     for (int filter = 0; filter < conv_kernel_dims[3]; filter++)
     {
         conv_output_dims_x = 0;
-        for (int row = conv_kernel_dims[0] - 1; row < cur_neurons_dims[0]; row += conv_strides[1])
+        for (int row = conv_kernel_dims[0] - 1; row < cur_neurons_dims[0]; row += conv_strides[0])
         {
             conv_output_dims_x++;
 
             conv_output_dims_y = 0;
-            for (int col = conv_kernel_dims[1] - 1; col < cur_neurons_dims[1]; col += conv_strides[0])
+            for (int col = conv_kernel_dims[1] - 1; col < cur_neurons_dims[1]; col += conv_strides[1])
             {
                 conv_output_dims_y++;
 
@@ -115,6 +122,166 @@ void Model::Architecture::connToConv(unsigned cur_layer_id, unsigned next_layer_
     conv_output_dims.push_back(conv_output_dims_x);
     conv_output_dims.push_back(conv_output_dims_y);
     conv_output_dims.push_back(conv_kernel_dims[3]);
+}
+
+void Model::Architecture::connToConvPadding(unsigned cur_layer_id, unsigned next_layer_id)
+{
+    auto &ori_neurons_dims = layers[cur_layer_id].output_dims;
+    auto &ori_neurons_ids = layers[cur_layer_id].output_neuron_ids;
+/*
+    for (int k = 0; k < ori_neurons_dims[2]; k++)
+    {
+        for (int i = 0; i < ori_neurons_dims[0]; i++)
+        {
+            for (int j = 0; j < ori_neurons_dims[1]; j++)
+            {
+                std::cout << ori_neurons_ids[k * ori_neurons_dims[0] * ori_neurons_dims[1] + 
+                                             i * ori_neurons_dims[1] + j] << " ";
+            }
+            std::cout << "\n";
+        }
+        std::cout << "\n";
+    }
+*/
+    auto &conv_kernel_dims = layers[next_layer_id].w_dims;
+    auto &conv_kernel_weights = layers[next_layer_id].weights;
+    auto &conv_strides = layers[next_layer_id].strides;
+    auto &conv_output_dims = layers[next_layer_id].output_dims;
+    auto &conv_output_neuron_ids = layers[next_layer_id].output_neuron_ids;
+
+    // Determine the number of paddings
+    auto padding_to_row = ((ori_neurons_dims[0] - 1) * conv_strides[0] - ori_neurons_dims[0] + conv_kernel_dims[0]) / 2;
+    auto padding_to_col = ((ori_neurons_dims[1] - 1) * conv_strides[1] - ori_neurons_dims[1] + conv_kernel_dims[1]) / 2;
+
+    auto final_row_size = ori_neurons_dims[0] + 2 * padding_to_row;
+    auto final_col_size = ori_neurons_dims[1] + 2 * padding_to_col;
+    auto final_dep_size = ori_neurons_dims[2];
+
+    std::vector<unsigned> final_neurons_dims{final_row_size, final_col_size, final_dep_size};
+    std::vector<uint64_t> final_neurons_ids(final_row_size * final_col_size * final_dep_size, 0);
+    std::vector<bool> final_neurons_ids_valid(final_row_size * final_col_size * final_dep_size, 0);
+    for (unsigned dep = 0; dep < ori_neurons_dims[2]; dep++)
+    {
+        for (unsigned row = 0; row < ori_neurons_dims[0]; row++)
+        {
+            for (unsigned col = 0; col < ori_neurons_dims[1]; col++)
+            {
+                final_neurons_ids[dep * final_row_size * final_col_size + 
+                                  (row + padding_to_row) * final_col_size + 
+                                  (col + padding_to_col)] = 
+                ori_neurons_ids[dep * ori_neurons_dims[0] * ori_neurons_dims[1] +
+                                row * ori_neurons_dims[1] +
+                                col];
+
+                final_neurons_ids_valid[dep * final_row_size * final_col_size + 
+                                        (row + padding_to_row) * final_col_size + 
+                                        (col + padding_to_col)] = 1;
+            }
+        }
+    }
+    /*
+    for (unsigned dep = 0; dep < final_neurons_dims[2]; dep++)
+    {
+        for (unsigned row = 0; row < final_neurons_dims[0]; row++)
+        {
+            for (unsigned col = 0; col < final_neurons_dims[1]; col++)
+            {
+                std::cout << final_neurons_ids[dep * final_neurons_dims[0] * final_neurons_dims[1] +
+                                               row * final_neurons_dims[1] +
+                                               col] << " ";
+            }
+            std::cout << "\n";
+        }
+        std::cout << "\n";
+    }
+    */
+
+    uint64_t conv_neuron_id_track = ori_neurons_ids[ori_neurons_ids.size() - 1] + 1;
+    // std::cout << conv_neuron_id_track << "\n";
+
+    unsigned conv_output_dims_x = 0;
+    unsigned conv_output_dims_y = 0;
+    // For each filter
+    for (int filter = 0; filter < conv_kernel_dims[3]; filter++)
+    {
+        conv_output_dims_x = 0;
+        for (int row = conv_kernel_dims[0] - 1; row < final_neurons_dims[0]; row += conv_strides[0])
+        {
+            conv_output_dims_x++;
+
+            conv_output_dims_y = 0;
+            for (int col = conv_kernel_dims[1] - 1; col < final_neurons_dims[1]; col += conv_strides[1])
+            {
+                conv_output_dims_y++;
+
+                // All neurons inside the current kernel
+                int starting_row = row + 1 - conv_kernel_dims[0];
+                int ending_row = row;
+                int starting_col = col + 1 - conv_kernel_dims[1];
+                int ending_col = col;
+
+		// std::cout << starting_row << " " << ending_row << " " << starting_col << " " << ending_col << "\n";
+                for (int k = 0; k < final_neurons_dims[2]; k++)
+                {
+                    for (int i = starting_row; i <= ending_row; i++)
+                    {
+                        for (int j = starting_col; j <= ending_col; j++)
+                        {
+                            
+                            if (final_neurons_ids_valid[k * final_neurons_dims[0] * final_neurons_dims[1] +
+                                                        i * final_neurons_dims[1] + j])
+                            {
+                                uint64_t cur_neuron_id = final_neurons_ids[k * final_neurons_dims[0] * final_neurons_dims[1] +
+                                                                           i * final_neurons_dims[1] + j];
+
+                                float weight = 
+                                conv_kernel_weights[(i - starting_row) *  conv_kernel_dims[1] * conv_kernel_dims[2] * conv_kernel_dims[3]
+                                                    + (j - starting_col) * conv_kernel_dims[2] * conv_kernel_dims[3]
+                                                    + k * conv_kernel_dims[3] + filter];
+
+                                // Record the connection information
+                                if (auto iter = connections.find(cur_neuron_id);
+                                         iter != connections.end())
+                                {
+                                    (*iter).second.out_neurons_ids.push_back(conv_neuron_id_track);
+                                    (*iter).second.weights.push_back(weight);
+                                }
+                                else
+                                {
+                                    connections.insert({cur_neuron_id, {conv_neuron_id_track, weight}});
+                                }
+
+                                // std::cout << cur_neuron_id << " ";
+                            }
+                        }
+                    }
+                }
+                // std::cout << "-> " << conv_neuron_id_track << "\n";
+                conv_output_neuron_ids.push_back(conv_neuron_id_track);
+                conv_neuron_id_track++;
+                // std::cout << "\n";
+            }
+        }
+    }
+    // std::cout << "\n";
+    conv_output_dims.push_back(conv_output_dims_x);
+    conv_output_dims.push_back(conv_output_dims_y);
+    conv_output_dims.push_back(conv_kernel_dims[3]);
+/*
+    for (int k = 0; k < conv_output_dims[2]; k++)
+    {
+        for (int i = 0; i < conv_output_dims[0]; i++)
+        {
+            for (int j = 0; j < conv_output_dims[1]; j++)
+            {
+                std::cout << conv_output_neuron_ids[k * conv_output_dims[0] * conv_output_dims[1] +
+                                                    i * conv_output_dims[1] + j] << " ";
+            }
+            std::cout << "\n";
+        }
+        std::cout << "\n";
+    }
+*/
 }
 
 void Model::Architecture::connToPool(unsigned cur_layer_id, unsigned next_layer_id)
@@ -395,6 +562,14 @@ void Model::loadArch(std::string &arch_file)
 
             if (class_name == "Conv2D" || class_name == "MaxPooling2D" || class_name == "AveragePooling2D")
             {
+                // get padding type
+                std::string padding_type = v.second.get<std::string>("config.padding");
+                if (padding_type == "same")
+                {
+                    arch.getLayer(name).padding_type = Layer::Padding_Type::same;
+                }
+
+                // get strides information
                 std::vector<std::string> strides_str;
                 std::vector<unsigned> strides;
                 for (boost::property_tree::ptree::value_type &cell : v.second.get_child("config.strides"))
