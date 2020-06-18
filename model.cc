@@ -5,6 +5,7 @@
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/foreach.hpp>
 
+#include <fstream>
 #include <sstream>
 
 namespace NCC
@@ -272,34 +273,38 @@ void Model::Architecture::connToDense(unsigned cur_layer_id, unsigned next_layer
     // std::cout << "\n";
 }
 
-void Model::Architecture::printConns()
+void Model::Architecture::printConns(std::string &out_file)
 {
+    std::ofstream out(out_file);
+
     for (int i = 0; i < layers.size() - 1; i++)
     {
         auto &output_neurons = layers[i].output_neuron_ids;
 
         for (auto neuron : output_neurons)
         {
-            std::cout << "Input neuron id: " << neuron << "\n";
-            std::cout << "Output neuron id: ";
-
+            
             auto iter = connections.find(neuron);
-            assert(iter != connections.end());
+            if (iter == connections.end()) { continue; }
+            out << "Input neuron id: " << neuron << "\n";
+            out << "Output neuron id: ";
+
             auto &out_neurons_ids = (*iter).second.out_neurons_ids;
             auto &weights = (*iter).second.weights;
 
             for (auto out_id : out_neurons_ids)
             {
-                std::cout << out_id << " ";
+                out << out_id << " ";
             }
-            std::cout << "\nWeights: ";
+            out << "\nWeights: ";
             for (auto weight : weights)
             {
-                std::cout << weight << " ";
+                out << weight << " ";
             }
-            std::cout << "\n\n";
+            out << "\n\n";
         }
     }
+    out.close();
 }
 
 void Model::loadArch(std::string &arch_file)
