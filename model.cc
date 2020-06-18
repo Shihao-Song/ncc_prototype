@@ -699,16 +699,21 @@ void Model::extrWeights(hid_t id)
 
     // The secondary last element indicates the layer name
     // TODO, I'm not sure if this is always true. Need to do more research
-    Layer &layer = arch.getLayer(tokens[tokens.size() - 2]);
-    std::vector<unsigned> dims_vec(dims, dims + ndims);
-    std::vector<float> rdata_vec(rdata, rdata + data_size);
-
+    
     if (tokens[tokens.size() - 1].find("kernel") != std::string::npos)
     {
+        Layer &layer = arch.getLayer(tokens[tokens.size() - 2]);
+        std::vector<unsigned> dims_vec(dims, dims + ndims);
+        std::vector<float> rdata_vec(rdata, rdata + data_size);
+
         layer.setWeights(dims_vec, rdata_vec);
     }
     else if (tokens[tokens.size() - 1].find("bias") != std::string::npos)
     {
+        Layer &layer = arch.getLayer(tokens[tokens.size() - 2]);
+        std::vector<unsigned> dims_vec(dims, dims + ndims);
+        std::vector<float> rdata_vec(rdata, rdata + data_size);
+
         layer.setBiases(dims_vec, rdata_vec);
     }
 }

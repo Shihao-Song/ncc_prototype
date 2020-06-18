@@ -120,6 +120,7 @@ class Model
             {
                 if (layer.name == name) { return layer; }
             }
+            std::cout << name << "\n";
             std::cerr << "Error: layer is not found.\n";
             exit(0);
         }
