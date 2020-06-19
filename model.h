@@ -88,7 +88,6 @@ class Model
         std::vector<Layer> layers;
 
       protected:
-        /* not good for large-scale network
         struct ConnEntry
         {
             ConnEntry(uint64_t _id, float _w)
@@ -101,7 +100,6 @@ class Model
             std::vector<float> weights;
         };
         std::unordered_map<uint64_t, ConnEntry> connections;
-        */
 
         void connToConv(unsigned, unsigned);
         void connToConvPadding(unsigned, unsigned);
@@ -109,14 +107,12 @@ class Model
         void connToFlat(unsigned, unsigned);
         void connToDense(unsigned, unsigned);
 
-      protected:
-	std::string out_root;
-        std::ofstream conn_txt;
+//      protected:
+//	std::string out_root;
+//        std::ofstream conn_txt;
 
       public:
         Architecture() {}
-
-        ~Architecture() { conn_txt << std::flush; conn_txt.close(); }
 
         void addLayer(std::string &_name, Layer::Layer_Type &_type)
         {
@@ -136,8 +132,8 @@ class Model
 
         void connector();
 
-        // void printConns(std::string &out_root);
-
+        void printConns(std::string &out_root);
+/*
         void setOutputFile(std::string &_root)
         {
             out_root = _root;
@@ -145,7 +141,7 @@ class Model
 	    std::cout << txt << "\n";
             conn_txt.open(txt);
         }
-
+*/
         void printLayers() // Only used for small network debuggings.
         {
             for (auto &layer : layers)
@@ -227,8 +223,8 @@ class Model
 
     void connector() { arch.connector(); } 
 
-    void setOutputFile(std::string &out_root) { arch.setOutputFile(out_root); }
-    // void printConns(std::string &out_root) { arch.printConns(out_root); }
+    // void setOutputFile(std::string &out_root) { arch.setOutputFile(out_root); }
+    void printConns(std::string &out_root) { arch.printConns(out_root); }
 
   protected:
     void loadArch(std::string &arch_file);
