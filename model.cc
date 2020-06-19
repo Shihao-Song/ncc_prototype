@@ -42,6 +42,23 @@ void Model::Architecture::connector()
         {
             connToDense(i, i + 1);
         }
+
+        auto name = layers[i].name;
+        auto type = layers[i].layer_type;
+
+        std::cout << "Layer name: " << name << "; ";
+        if (type == Layer::Layer_Type::Input) { std::cout << "Layer type: Input"; }
+        else if (type == Layer::Layer_Type::Conv2D) { std::cout << "Layer type: Conv2D"; }
+        else if(type == Layer::Layer_Type::MaxPooling2D) { std::cout << "Layer type: MaxPooling2D"; }
+        else if(type == Layer::Layer_Type::AveragePooling2D) { std::cout << "Layer type: AveragePooling2D"; }
+        else if(type == Layer::Layer_Type::Flatten) { std::cout << "Layer type: Flatten"; }
+        else if(type == Layer::Layer_Type::Dense) { std::cout << "Layer type: Dense"; }
+        std::cout << "\n";
+
+        auto &output_dims = layers[i].output_dims;
+        std::cout << "Output shape: ";
+        for (auto dim : output_dims) { std::cout << dim << " "; }
+        std::cout << "\n\n";
     }
 }
 
@@ -55,6 +72,80 @@ void Model::Architecture::connToConv(unsigned cur_layer_id, unsigned next_layer_
     auto &conv_strides = layers[next_layer_id].strides;
     auto &conv_output_dims = layers[next_layer_id].output_dims;
     auto &conv_output_neuron_ids = layers[next_layer_id].output_neuron_ids;
+
+    // Important. We need to re-organize the conv kernel to be more memory-friendly
+    // Original layout: row->col->dep->filter
+    // New layer: filter->dep->row->col
+    unsigned row_limit = conv_kernel_dims[0];
+    unsigned col_limit = conv_kernel_dims[1];
+    unsigned dep_limit = conv_kernel_dims[2];
+    unsigned filter_limit = conv_kernel_dims[3];
+    std::vector<float> conv_kernel_weights_format(filter_limit * dep_limit * row_limit * col_limit, 0);
+    for (unsigned row = 0; row < row_limit; row++)
+    {
+        for (unsigned col = 0; col < col_limit; col++)
+        {
+            for (unsigned dep = 0; dep < dep_limit; dep++)
+            {
+                for (unsigned filter = 0; filter < filter_limit; filter++)
+                {
+                    conv_kernel_weights_format[filter * dep_limit * row_limit * col_limit + 
+                                               dep * row_limit * col_limit +
+                                               row * col_limit +
+                                               col] = 
+                    conv_kernel_weights[row * col_limit * dep_limit * filter_limit +
+                                        col * dep_limit * filter_limit +
+                                        dep * filter_limit +
+                                        filter];
+                }
+            }
+        }
+    }
+
+    /*
+    for (unsigned row = 0; row < row_limit; row++)
+    {
+        for (unsigned col = 0; col < col_limit; col++)
+        {
+            for (unsigned dep = 0; dep < dep_limit; dep++)
+            {
+                for (unsigned filter = 0; filter < filter_limit; filter++)
+                {
+                    std::cout << conv_kernel_weights[row * col_limit * dep_limit * filter_limit +
+                                                     col * dep_limit * filter_limit +
+                                                     dep * filter_limit +
+                                                     filter]
+                              << " ";
+                }
+                std::cout << "\n";
+            }
+            std::cout << "\n";
+        }
+        std::cout << "\n";
+    }
+    std::cout << "-------------------------\n";
+    for (unsigned filter = 0; filter < filter_limit; filter++)
+    {
+        for (unsigned dep = 0; dep < dep_limit; dep++)
+        {
+            for (unsigned row = 0; row < row_limit; row++)
+            {
+                for (unsigned col = 0; col < col_limit; col++) 
+                {
+                    std::cout << conv_kernel_weights_format[filter * dep_limit * row_limit * col_limit + 
+                                                            dep * row_limit * col_limit + 
+                                                            row * col_limit +
+                                                            col] << " ";
+                }
+                std::cout << "\n";
+            }
+            std::cout << "\n";
+        }
+        std::cout << "\n";
+    }
+
+    exit(0);
+    */
 
     uint64_t conv_neuron_id_track = cur_neurons_ids[cur_neurons_ids.size() - 1] + 1;
     // std::cout << conv_neuron_id_track << "\n";
@@ -90,11 +181,18 @@ void Model::Architecture::connToConv(unsigned cur_layer_id, unsigned next_layer_
                             uint64_t cur_neuron_id = cur_neurons_ids[k * cur_neurons_dims[0] * cur_neurons_dims[1] +
                                                                      i * cur_neurons_dims[1] + j];
 
-                            float weight = 
-                            conv_kernel_weights[(i - starting_row) *  conv_kernel_dims[1] * conv_kernel_dims[2] * conv_kernel_dims[3]
-                                                + (j - starting_col) * conv_kernel_dims[2] * conv_kernel_dims[3]
-                                                + k * conv_kernel_dims[3] + filter];
+                            //float weight = 
+                            //conv_kernel_weights[(i - starting_row) *  conv_kernel_dims[1] * conv_kernel_dims[2] * conv_kernel_dims[3]
+                            //                    + (j - starting_col) * conv_kernel_dims[2] * conv_kernel_dims[3]
+                            //                    + k * conv_kernel_dims[3] + filter];
 
+                            float weight = 
+                            conv_kernel_weights_format[filter * conv_kernel_dims[2] * conv_kernel_dims[0] * conv_kernel_dims[1] + 
+                                                       k * conv_kernel_dims[0] * conv_kernel_dims[1] +
+                                                       (i - starting_row) * conv_kernel_dims[1] +
+                                                       (j - starting_col)];
+                            // std::cout << cur_neuron_id << " " << conv_neuron_id_track << " " << weight << "\n";
+                            /*
                             // Record the connection information
                             if (auto iter = connections.find(cur_neuron_id);
                                      iter != connections.end())
@@ -106,7 +204,7 @@ void Model::Architecture::connToConv(unsigned cur_layer_id, unsigned next_layer_
                             {
                                 connections.insert({cur_neuron_id, {conv_neuron_id_track, weight}});
                             }
-
+                            */
                             // std::cout << cur_neuron_id << " ";
                         }
                     }
@@ -148,6 +246,35 @@ void Model::Architecture::connToConvPadding(unsigned cur_layer_id, unsigned next
     auto &conv_strides = layers[next_layer_id].strides;
     auto &conv_output_dims = layers[next_layer_id].output_dims;
     auto &conv_output_neuron_ids = layers[next_layer_id].output_neuron_ids;
+
+    // Important. We need to re-organize the conv kernel to be more memory-friendly
+    // Original layout: row->col->dep->filter
+    // New layer: filter->dep->row->col
+    unsigned row_limit = conv_kernel_dims[0];
+    unsigned col_limit = conv_kernel_dims[1];
+    unsigned dep_limit = conv_kernel_dims[2];
+    unsigned filter_limit = conv_kernel_dims[3];
+    std::vector<float> conv_kernel_weights_format(filter_limit * dep_limit * row_limit * col_limit, 0);
+    for (unsigned row = 0; row < row_limit; row++)
+    {
+        for (unsigned col = 0; col < col_limit; col++)
+        {
+            for (unsigned dep = 0; dep < dep_limit; dep++)
+            {
+                for (unsigned filter = 0; filter < filter_limit; filter++)
+                {
+                    conv_kernel_weights_format[filter * dep_limit * row_limit * col_limit +
+                                               dep * row_limit * col_limit +
+                                               row * col_limit +
+                                               col] =
+                    conv_kernel_weights[row * col_limit * dep_limit * filter_limit +
+                                        col * dep_limit * filter_limit +
+                                        dep * filter_limit +
+                                        filter];
+                }
+            }
+        }
+    }
 
     // Determine the number of paddings
     auto padding_to_row = ((ori_neurons_dims[0] - 1) * conv_strides[0] - ori_neurons_dims[0] + conv_kernel_dims[0]) / 2;
@@ -234,11 +361,18 @@ void Model::Architecture::connToConvPadding(unsigned cur_layer_id, unsigned next
                                 uint64_t cur_neuron_id = final_neurons_ids[k * final_neurons_dims[0] * final_neurons_dims[1] +
                                                                            i * final_neurons_dims[1] + j];
 
-                                float weight = 
-                                conv_kernel_weights[(i - starting_row) *  conv_kernel_dims[1] * conv_kernel_dims[2] * conv_kernel_dims[3]
-                                                    + (j - starting_col) * conv_kernel_dims[2] * conv_kernel_dims[3]
-                                                    + k * conv_kernel_dims[3] + filter];
+                                // float weight = 
+                                // conv_kernel_weights[(i - starting_row) *  conv_kernel_dims[1] * conv_kernel_dims[2] * conv_kernel_dims[3]
+                                //                     + (j - starting_col) * conv_kernel_dims[2] * conv_kernel_dims[3]
+                                //                     + k * conv_kernel_dims[3] + filter];
 
+                                float weight =
+                                conv_kernel_weights_format[filter * conv_kernel_dims[2] * conv_kernel_dims[0] * conv_kernel_dims[1] +
+                                                           k * conv_kernel_dims[0] * conv_kernel_dims[1] +
+                                                           (i - starting_row) * conv_kernel_dims[1] +
+                                                           (j - starting_col)];
+                                // std::cout << cur_neuron_id << " " << conv_neuron_id_track << " " << weight << "\n";
+                                /*
                                 // Record the connection information
                                 if (auto iter = connections.find(cur_neuron_id);
                                          iter != connections.end())
@@ -250,7 +384,7 @@ void Model::Architecture::connToConvPadding(unsigned cur_layer_id, unsigned next
                                 {
                                     connections.insert({cur_neuron_id, {conv_neuron_id_track, weight}});
                                 }
-
+                                */
                                 // std::cout << cur_neuron_id << " ";
                             }
                         }
@@ -327,7 +461,7 @@ void Model::Architecture::connToPool(unsigned cur_layer_id, unsigned next_layer_
                     {
                         uint64_t cur_neuron_id = cur_neurons_ids[filter * cur_neurons_dims[0] * cur_neurons_dims[1] +
                                                                  i * cur_neurons_dims[1] + j];
-
+                        /*
                         // Record the connection information
                         if (auto iter = connections.find(cur_neuron_id);
                                  iter != connections.end())
@@ -339,7 +473,7 @@ void Model::Architecture::connToPool(unsigned cur_layer_id, unsigned next_layer_
                         {
                             connections.insert({cur_neuron_id, {pool_neuron_id_track, -1}});
                         }
-
+                        */
                         // std::cout << cur_neuron_id << " ";
                     }
                 }
@@ -377,6 +511,7 @@ void Model::Architecture::connToFlat(unsigned cur_layer_id, unsigned next_layer_
     for (uint64_t i = 0; i < data_dim; i++)
     {
         uint64_t cur_neuron_id = cur_neurons_ids[i];
+        /*
         if (auto iter = connections.find(cur_neuron_id);
                iter != connections.end())
         {
@@ -387,6 +522,7 @@ void Model::Architecture::connToFlat(unsigned cur_layer_id, unsigned next_layer_
         {
             connections.insert({cur_neuron_id, {out_neuron_id_track, -1}});
         }
+        */
 
         // std::cout << cur_neuron_id << " -> " << out_neuron_id_track << "\n";
         output_neuron_ids.push_back(out_neuron_id_track);
@@ -421,7 +557,7 @@ void Model::Architecture::connToDense(unsigned cur_layer_id, unsigned next_layer
         {
             uint64_t cur_neuron_id = cur_neurons_ids[j];
             float weight = dense_weights[j * dense_dims[1] + i];
-
+            /*
             if (auto iter = connections.find(cur_neuron_id);
                    iter != connections.end())
             {
@@ -432,6 +568,7 @@ void Model::Architecture::connToDense(unsigned cur_layer_id, unsigned next_layer
             {
                 connections.insert({cur_neuron_id, {out_neuron_id_track, weight}});
             }
+            */
             // std::cout << cur_neuron_id << " ";
         }
         // std::cout << "-> " << out_neuron_id_track << "\n";
@@ -540,14 +677,23 @@ void Model::loadArch(std::string &arch_file)
             std::string name = v.second.get<std::string>("config.name");
 
             Layer::Layer_Type layer_type = Layer::Layer_Type::MAX;
-            if (class_name == "Conv2D") { layer_type = Layer::Layer_Type::Conv2D; }
+            if (class_name == "InputLayer") { layer_type = Layer::Layer_Type::Input; }
+            else if (class_name == "Conv2D") { layer_type = Layer::Layer_Type::Conv2D; }
             else if (class_name == "MaxPooling2D") { layer_type = Layer::Layer_Type::MaxPooling2D; }
             else if (class_name == "AveragePooling2D") { layer_type = Layer::Layer_Type::AveragePooling2D; }
             else if (class_name == "Flatten") { layer_type = Layer::Layer_Type::Flatten; }
             else if (class_name == "Dense") { layer_type = Layer::Layer_Type::Dense; }
             else { std::cerr << "Error: Unsupported layer type.\n"; exit(0); }
 
-            arch.addLayer(name, layer_type);
+            if (class_name != "InputLayer")
+            {
+                arch.addLayer(name, layer_type);
+            }
+            else
+            {
+                std::string default_name = "input";
+                arch.getLayer(default_name).name = name; // When input is explicitly mentioned.
+            }
 
             if (class_name == "Conv2D" || class_name == "MaxPooling2D" || class_name == "AveragePooling2D")
             {
@@ -672,8 +818,7 @@ void Model::extrWeights(hid_t id)
     // Calculating total 1D size
     unsigned data_size = 1;
     for (int i = 0; i < ndims; i++) { data_size *= dims[i]; }
-
-    float rdata[data_size];
+    float *rdata = (float *)malloc(data_size * sizeof(float));
     status = H5Dread(id, datatype_id, H5S_ALL, H5S_ALL, H5P_DEFAULT, rdata);
     
     // Add information to the corres. layer
@@ -685,10 +830,8 @@ void Model::extrWeights(hid_t id)
     {
         tokens.push_back(intermediate);
     }
-
     // The secondary last element indicates the layer name
     // TODO, I'm not sure if this is always true. Need to do more research
-    
     if (tokens[tokens.size() - 1].find("kernel") != std::string::npos)
     {
         Layer &layer = arch.getLayer(tokens[tokens.size() - 2]);
@@ -705,6 +848,7 @@ void Model::extrWeights(hid_t id)
 
         layer.setBiases(dims_vec, rdata_vec);
     }
+    free(rdata);
 }
 }
 }

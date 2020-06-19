@@ -7,9 +7,9 @@ int main(int argc, char *argv[])
     NCC::NCC_FrontEnd::Model model(arch_file, weight_file);
     model.connector();
     // std::cout << "\n";
-    model.printLayers();
+    // model.printLayers();
     // std::cout << "\n";
-    std::string out_root = arch_file.substr(0, arch_file.find("."));
-    model.printConns(out_root);
+    //std::string out_root = arch_file.substr(0, arch_file.find("."));
+    //model.printConns(out_root);
 }
 

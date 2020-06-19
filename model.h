@@ -137,7 +137,8 @@ class Model
                 auto type = layer.layer_type;
 
                 std::cout << "Layer name: " << name << "; ";
-                if (type == Layer::Layer_Type::Conv2D) { std::cout << "Layer type: Conv2D"; }
+                if (type == Layer::Layer_Type::Input) { std::cout << "Layer type: Input"; }
+		else if (type == Layer::Layer_Type::Conv2D) { std::cout << "Layer type: Conv2D"; }
                 else if(type == Layer::Layer_Type::MaxPooling2D) { std::cout << "Layer type: MaxPooling2D"; }
                 else if(type == Layer::Layer_Type::AveragePooling2D) { std::cout << "Layer type: AveragePooling2D"; }
                 else if(type == Layer::Layer_Type::Flatten) { std::cout << "Layer type: Flatten"; }
