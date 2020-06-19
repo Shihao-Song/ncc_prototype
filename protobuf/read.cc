@@ -2,7 +2,7 @@
 #include <fstream>
 #include <string>
 #include <vector>
-#include "protobuf/proto_graph/graph.pb.h"
+#include "proto_graph/graph.pb.h"
 
 int main(int argc, char* argv[])
 {

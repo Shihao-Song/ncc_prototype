@@ -9,7 +9,7 @@ int main(int argc, char *argv[])
     // std::cout << "\n";
     model.printLayers();
     // std::cout << "\n";
-    //std::string out_root = arch_file.substr(0, arch_file.find("."));
-    //model.printConns(out_root);
+    std::string out_root = arch_file.substr(0, arch_file.find("."));
+    model.printConns(out_root);
 }
 

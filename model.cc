@@ -62,30 +62,30 @@ void Model::Architecture::connToConv(unsigned cur_layer_id, unsigned next_layer_
     unsigned conv_output_dims_x = 0;
     unsigned conv_output_dims_y = 0;
     // For each filter
-    for (int filter = 0; filter < conv_kernel_dims[3]; filter++)
+    for (unsigned filter = 0; filter < conv_kernel_dims[3]; filter++)
     {
         conv_output_dims_x = 0;
-        for (int row = conv_kernel_dims[0] - 1; row < cur_neurons_dims[0]; row += conv_strides[0])
+        for (unsigned row = conv_kernel_dims[0] - 1; row < cur_neurons_dims[0]; row += conv_strides[0])
         {
             conv_output_dims_x++;
 
             conv_output_dims_y = 0;
-            for (int col = conv_kernel_dims[1] - 1; col < cur_neurons_dims[1]; col += conv_strides[1])
+            for (unsigned col = conv_kernel_dims[1] - 1; col < cur_neurons_dims[1]; col += conv_strides[1])
             {
                 conv_output_dims_y++;
 
                 // All neurons inside the current kernel
-                int starting_row = row + 1 - conv_kernel_dims[0];
-                int ending_row = row;
-                int starting_col = col + 1 - conv_kernel_dims[1];
-                int ending_col = col;
+                unsigned starting_row = row + 1 - conv_kernel_dims[0];
+                unsigned ending_row = row;
+                unsigned starting_col = col + 1 - conv_kernel_dims[1];
+                unsigned ending_col = col;
 
 		// std::cout << starting_row << " " << ending_row << " " << starting_col << " " << ending_col << "\n";
-                for (int k = 0; k < cur_neurons_dims[2]; k++)
+                for (unsigned k = 0; k < cur_neurons_dims[2]; k++)
                 {
-                    for (int i = starting_row; i <= ending_row; i++)
+                    for (unsigned i = starting_row; i <= ending_row; i++)
                     {
-                        for (int j = starting_col; j <= ending_col; j++)
+                        for (unsigned j = starting_col; j <= ending_col; j++)
                         {
                             uint64_t cur_neuron_id = cur_neurons_ids[k * cur_neurons_dims[0] * cur_neurons_dims[1] +
                                                                      i * cur_neurons_dims[1] + j];
@@ -202,30 +202,30 @@ void Model::Architecture::connToConvPadding(unsigned cur_layer_id, unsigned next
     unsigned conv_output_dims_x = 0;
     unsigned conv_output_dims_y = 0;
     // For each filter
-    for (int filter = 0; filter < conv_kernel_dims[3]; filter++)
+    for (unsigned filter = 0; filter < conv_kernel_dims[3]; filter++)
     {
         conv_output_dims_x = 0;
-        for (int row = conv_kernel_dims[0] - 1; row < final_neurons_dims[0]; row += conv_strides[0])
+        for (unsigned row = conv_kernel_dims[0] - 1; row < final_neurons_dims[0]; row += conv_strides[0])
         {
             conv_output_dims_x++;
 
             conv_output_dims_y = 0;
-            for (int col = conv_kernel_dims[1] - 1; col < final_neurons_dims[1]; col += conv_strides[1])
+            for (unsigned col = conv_kernel_dims[1] - 1; col < final_neurons_dims[1]; col += conv_strides[1])
             {
                 conv_output_dims_y++;
 
                 // All neurons inside the current kernel
-                int starting_row = row + 1 - conv_kernel_dims[0];
-                int ending_row = row;
-                int starting_col = col + 1 - conv_kernel_dims[1];
-                int ending_col = col;
+                unsigned starting_row = row + 1 - conv_kernel_dims[0];
+                unsigned ending_row = row;
+                unsigned starting_col = col + 1 - conv_kernel_dims[1];
+                unsigned ending_col = col;
 
 		// std::cout << starting_row << " " << ending_row << " " << starting_col << " " << ending_col << "\n";
-                for (int k = 0; k < final_neurons_dims[2]; k++)
+                for (unsigned k = 0; k < final_neurons_dims[2]; k++)
                 {
-                    for (int i = starting_row; i <= ending_row; i++)
+                    for (unsigned i = starting_row; i <= ending_row; i++)
                     {
-                        for (int j = starting_col; j <= ending_col; j++)
+                        for (unsigned j = starting_col; j <= ending_col; j++)
                         {
                             
                             if (final_neurons_ids_valid[k * final_neurons_dims[0] * final_neurons_dims[1] +
@@ -303,27 +303,27 @@ void Model::Architecture::connToPool(unsigned cur_layer_id, unsigned next_layer_
     pool_kernel_dims.push_back(cur_neurons_dims[2]); // Number of filters equals to that of the prev. layer.
 
     // For each filter
-    for (int filter = 0; filter < pool_kernel_dims[3]; filter++)
+    for (unsigned filter = 0; filter < pool_kernel_dims[3]; filter++)
     {
         pool_output_dims_x = 0;
-        for (int row = pool_kernel_dims[0] - 1; row < cur_neurons_dims[0]; row += pool_strides[1])
+        for (unsigned row = pool_kernel_dims[0] - 1; row < cur_neurons_dims[0]; row += pool_strides[0])
         {
             pool_output_dims_x++;
 
             pool_output_dims_y = 0;
-            for (int col = pool_kernel_dims[1] - 1; col < cur_neurons_dims[1]; col += pool_strides[0])
+            for (unsigned col = pool_kernel_dims[1] - 1; col < cur_neurons_dims[1]; col += pool_strides[1])
             {
                 pool_output_dims_y++;
 
                 // All neurons inside the current kernel
-                int starting_row = row + 1 - pool_kernel_dims[0];
-                int ending_row = row;
-                int starting_col = col + 1 - pool_kernel_dims[1];
-                int ending_col = col;
+                unsigned starting_row = row + 1 - pool_kernel_dims[0];
+                unsigned ending_row = row;
+                unsigned starting_col = col + 1 - pool_kernel_dims[1];
+                unsigned ending_col = col;
 
-                for (int i = starting_row; i <= ending_row; i++)
+                for (unsigned i = starting_row; i <= ending_row; i++)
                 {
-                    for (int j = starting_col; j <= ending_col; j++)
+                    for (unsigned j = starting_col; j <= ending_col; j++)
                     {
                         uint64_t cur_neuron_id = cur_neurons_ids[filter * cur_neurons_dims[0] * cur_neurons_dims[1] +
                                                                  i * cur_neurons_dims[1] + j];
@@ -415,9 +415,9 @@ void Model::Architecture::connToDense(unsigned cur_layer_id, unsigned next_layer
     output_dims.push_back(1);
     output_dims.push_back(1);
 
-    for (uint64_t i = 0; i < dense_dims[1]; i++)
+    for (unsigned i = 0; i < dense_dims[1]; i++)
     {
-        for (uint64_t j = 0; j < dense_dims[0]; j++)
+        for (unsigned j = 0; j < dense_dims[0]; j++)
         {
             uint64_t cur_neuron_id = cur_neurons_ids[j];
             float weight = dense_weights[j * dense_dims[1] + i];
@@ -467,26 +467,15 @@ void Model::Architecture::printConns(std::string &out_root)
             node->set_id(neuron);
             node->set_type(NCC_Graph_Proto::Node::IO); 
 
-            // out << "Input neuron id: " << neuron << "\n";
-            // out << "Output neuron id: ";
-            out << neuron << "\n";
-
             auto &out_neurons_ids = (*iter).second.out_neurons_ids;
             auto &weights = (*iter).second.weights;
 
-            for (auto out_id : out_neurons_ids)
+            for (unsigned i = 0; i < out_neurons_ids.size(); i++)
             {
-                out << out_id << " ";
-                node->add_adjs(out_id);
+                out << neuron << " " << out_neurons_ids[i] << " " << weights[i] << "\n";
+                node->add_adjs(out_neurons_ids[i]);
+                node->add_weights(weights[i]);
             }
-            out << "\n";
-            // out << "\nWeights: ";
-            for (auto weight : weights)
-            {
-                out << weight << " ";
-                node->add_weights(weight);
-            }
-            out << "\n\n";
         }
     }
     out.close();
