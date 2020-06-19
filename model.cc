@@ -5,7 +5,6 @@
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/foreach.hpp>
 
-#include <fstream>
 #include <sstream>
 
 #include "protobuf/proto_graph/graph.pb.h"
@@ -191,7 +190,7 @@ void Model::Architecture::connToConv(unsigned cur_layer_id, unsigned next_layer_
                                                        k * conv_kernel_dims[0] * conv_kernel_dims[1] +
                                                        (i - starting_row) * conv_kernel_dims[1] +
                                                        (j - starting_col)];
-                            // std::cout << cur_neuron_id << " " << conv_neuron_id_track << " " << weight << "\n";
+                            conn_txt << cur_neuron_id << " " << conv_neuron_id_track << " " << weight << "\n";
                             /*
                             // Record the connection information
                             if (auto iter = connections.find(cur_neuron_id);
@@ -371,6 +370,7 @@ void Model::Architecture::connToConvPadding(unsigned cur_layer_id, unsigned next
                                                            k * conv_kernel_dims[0] * conv_kernel_dims[1] +
                                                            (i - starting_row) * conv_kernel_dims[1] +
                                                            (j - starting_col)];
+                                conn_txt << cur_neuron_id << " " << conv_neuron_id_track << " " << weight << "\n";
                                 // std::cout << cur_neuron_id << " " << conv_neuron_id_track << " " << weight << "\n";
                                 /*
                                 // Record the connection information
@@ -475,6 +475,7 @@ void Model::Architecture::connToPool(unsigned cur_layer_id, unsigned next_layer_
                         }
                         */
                         // std::cout << cur_neuron_id << " ";
+                        conn_txt << cur_neuron_id << " " << pool_neuron_id_track << " -1" << "\n";
                     }
                 }
                 // std::cout << "-> " << pool_neuron_id_track << "\n";
@@ -523,7 +524,7 @@ void Model::Architecture::connToFlat(unsigned cur_layer_id, unsigned next_layer_
             connections.insert({cur_neuron_id, {out_neuron_id_track, -1}});
         }
         */
-
+        conn_txt << cur_neuron_id << " " << out_neuron_id_track << " -1" << "\n";
         // std::cout << cur_neuron_id << " -> " << out_neuron_id_track << "\n";
         output_neuron_ids.push_back(out_neuron_id_track);
         out_neuron_id_track++;
@@ -557,6 +558,7 @@ void Model::Architecture::connToDense(unsigned cur_layer_id, unsigned next_layer
         {
             uint64_t cur_neuron_id = cur_neurons_ids[j];
             float weight = dense_weights[j * dense_dims[1] + i];
+            conn_txt << cur_neuron_id << " " << out_neuron_id_track << " " << weight << "\n";
             /*
             if (auto iter = connections.find(cur_neuron_id);
                    iter != connections.end())
@@ -578,7 +580,7 @@ void Model::Architecture::connToDense(unsigned cur_layer_id, unsigned next_layer
 
     // std::cout << "\n";
 }
-
+/*
 void Model::Architecture::printConns(std::string &out_root)
 {
     GOOGLE_PROTOBUF_VERIFY_VERSION;
@@ -627,6 +629,7 @@ void Model::Architecture::printConns(std::string &out_root)
     google::protobuf::ShutdownProtobufLibrary();
 
 }
+*/
 
 void Model::loadArch(std::string &arch_file)
 {
