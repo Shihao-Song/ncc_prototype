@@ -9,6 +9,8 @@
 
 #include "protobuf/proto_graph/graph.pb.h"
 
+#include <boost/filesystem.hpp>
+
 namespace NCC
 {
 namespace NCC_FrontEnd
@@ -581,47 +583,34 @@ void Model::Architecture::connToDense(unsigned cur_layer_id, unsigned next_layer
     // std::cout << "\n";
 }
 
+// TODO, we may need to break down the protobuf into multiple smaller files.
 void Model::Architecture::printConns(std::string &out_root)
 {
-/*
-    GOOGLE_PROTOBUF_VERIFY_VERSION;
-    NCC_Graph_Proto::Graph graph;
-    NCC_Graph_Proto::Node *node;
-
-    std::string txt = out_root + ".connection_info.txt";
-    std::string proto = out_root + ".graph";
-*/
+    // Txt record
     std::string conns_out_txt = out_root + ".connection_info.txt";
+    std::ofstream conns_out(conns_out_txt);
+
     std::string weights_out_txt = out_root + ".weight_info.txt";
     std::ofstream weights_out(weights_out_txt);
-    std::ofstream conns_out(conns_out_txt);
 
     for (int i = 0; i < layers.size() - 1; i++)
     {
         auto &output_neurons = layers[i].output_neuron_ids;
 
         for (auto neuron : output_neurons)
-        {
-            
+        {            
             auto iter = connections.find(neuron);
             if (iter == connections.end()) { continue; }
-
-            //node = graph.add_nodes();
-            //node->set_id(neuron);
-            //node->set_type(NCC_Graph_Proto::Node::IO); 
 
             auto &out_neurons_ids = (*iter).second.out_neurons_ids;
             auto &weights = (*iter).second.weights;
 
             weights_out << neuron << " ";
             conns_out << neuron << " ";
-            for (unsigned i = 0; i < out_neurons_ids.size(); i++)
+            for (unsigned j = 0; j < out_neurons_ids.size(); j++)
             {
-                weights_out << weights[i] << " ";
-                conns_out << out_neurons_ids[i] << " ";
-                //out << neuron << " " << out_neurons_ids[i] << " " << weights[i] << "\n";
-                //node->add_adjs(out_neurons_ids[i]);
-                //node->add_weights(weights[i]);
+                weights_out << weights[j] << " ";
+                conns_out << out_neurons_ids[j] << " ";
             }
             weights_out << "\n";
             conns_out << "\n";
@@ -629,16 +618,79 @@ void Model::Architecture::printConns(std::string &out_root)
     }
     weights_out.close();
     conns_out.close();
-/*
-    std::fstream proto_out(proto, std::ios::out | std::ios::trunc | std::ios::binary);
-    if (!graph.SerializeToOstream(&proto_out))
+
+    // Protobuf record
+    GOOGLE_PROTOBUF_VERIFY_VERSION;
+    NCC_Graph_Proto::Graph graph;
+    NCC_Graph_Proto::Node *node;
+
+    boost::filesystem::path graph_root = out_root + ".graph";
+    if (boost::filesystem::exists(graph_root))
     {
-        std::cerr << "Failed to graph." << std::endl;
+        std::cerr << "Error: graph already directory exists. \n";
         exit(0);
     }
+    boost::filesystem::create_directory(graph_root);
 
+    unsigned num_in_neurons_per_sub_graph = 1000;
+    unsigned sub_graph_idx = 0;
+    boost::filesystem::path sub_graph = std::to_string(sub_graph_idx) + ".graph";
+    boost::filesystem::path sub_graph_full = graph_root / sub_graph;
+
+    unsigned neurons_count = 0;
+    for (int i = 0; i < layers.size() - 1; i++)
+    {
+        auto &output_neurons = layers[i].output_neuron_ids;
+
+        for (auto neuron : output_neurons)
+        {
+            auto iter = connections.find(neuron);
+            if (iter == connections.end()) { continue; }
+            node = graph.add_nodes();
+            node->set_id(neuron);
+            node->set_type(NCC_Graph_Proto::Node::IO); 
+
+            auto &out_neurons_ids = (*iter).second.out_neurons_ids;
+            auto &weights = (*iter).second.weights;
+
+            for (unsigned j = 0; j < out_neurons_ids.size(); j++)
+            {
+                node->add_adjs(out_neurons_ids[j]);
+                node->add_weights(weights[j]);
+            }
+            
+            if (++neurons_count >= num_in_neurons_per_sub_graph)
+            {
+                neurons_count = 0;
+                std::ofstream out(sub_graph_full.string());
+                if (!graph.SerializeToOstream(&out))
+                {
+                    std::cerr << "Failed to graph." << std::endl;
+                    exit(0);
+                }
+                out.close();
+
+                // Start a new message
+                sub_graph_idx++;
+                sub_graph = std::to_string(sub_graph_idx) + ".graph";
+                sub_graph_full = graph_root / sub_graph;
+                graph.Clear();
+            }
+        }
+    }
+    
+    if (neurons_count)
+    {
+        std::ofstream out(sub_graph_full.string());
+        if (!graph.SerializeToOstream(&out))
+        {
+            std::cerr << "Failed to graph." << std::endl;
+            exit(0);
+        }
+        out.close();
+    }
+    
     google::protobuf::ShutdownProtobufLibrary();
-*/
 }
 
 void Model::loadArch(std::string &arch_file)
