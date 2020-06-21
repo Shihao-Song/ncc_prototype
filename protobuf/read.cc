@@ -4,6 +4,8 @@
 #include <vector>
 #include "proto_graph/graph.pb.h"
 
+#include <boost/filesystem.hpp>
+
 int main(int argc, char* argv[])
 {
     GOOGLE_PROTOBUF_VERIFY_VERSION;
@@ -14,62 +16,50 @@ int main(int argc, char* argv[])
         return -1;
     }
 
-    NCC_Graph_Proto::Graph graph;
+    std::string conns_out_txt = "check.connection_info.txt";
+    std::ofstream conns_out(conns_out_txt);
 
-    std::fstream input(argv[1], std::ios::in | std::ios::binary);
-    if (!graph.ParseFromIstream(&input))
+    std::string weights_out_txt = "check.weight_info.txt";
+    std::ofstream weights_out(weights_out_txt);
+
+    boost::filesystem::path graph_root(argv[1]);
+
+    unsigned sub_graph_idx = 0;
+    boost::filesystem::path sub_graph = std::to_string(sub_graph_idx) + ".graph";
+    boost::filesystem::path sub_graph_full = graph_root / sub_graph;
+
+    while (boost::filesystem::exists(sub_graph_full))
     {
-        std::cerr << "Failed to parse the graph." << std::endl;
-        return -1;
-    }
-
-    // Parse the nodes by neuron type
-    std::vector<NCC_Graph_Proto::Node> bias_neurons;
-    std::vector<NCC_Graph_Proto::Node> io_neurons;
-
-    for (int i = 0; i < graph.nodes_size(); i++)
-    {
-        const NCC_Graph_Proto::Node &node = graph.nodes(i);
-
-        switch (node.type())
-	{
-            case NCC_Graph_Proto::Node::IO:
-                io_neurons.push_back(node);
-                break;
-            case NCC_Graph_Proto::Node::BIAS:
-                bias_neurons.push_back(node);
-                break;
-        }
-    }
-
-    // Output the graph (1) IO neurons
-    for (auto neuron : io_neurons)
-    {
-        std::cout << "Neuron ID: " << neuron.id() << std::endl;
-        std::cout << "Neuron Type: IO" << std::endl;
-        for (int j = 0; j < neuron.adjs_size(); j++)
+        std::ifstream input(sub_graph_full.string());
+        NCC_Graph_Proto::Graph graph;
+        if (!graph.ParseFromIstream(&input))
         {
-            std::cout << "Dest. Neuron ID: " << neuron.adjs(j) << " (";
-            std::cout << neuron.weights(j) << ")" << std::endl;
+            std::cerr << "Failed to parse the graph." << std::endl;
+            return -1;
         }
+        input.close();
 
-	std::cout << std::endl;
-    }
-
-    // Output the graph (2) Bias neurons
-    auto bias_id = 0;
-    for (auto neuron : bias_neurons)
-    {
-        std::string id = "b_" + std::to_string(bias_id);
-        std::cout << "Neuron ID: " << id << std::endl;
-        std::cout << "Neuron Type: BIAS" << std::endl;
-        for (int j = 0; j < neuron.adjs_size(); j++)
+        for (int i = 0; i < graph.nodes_size(); i++)
         {
-            std::cout << "Dest. Neuron ID: " << neuron.adjs(j) << " (";
-            std::cout << neuron.weights(j) << ")" << std::endl;
-        }
-	bias_id++;
+            const NCC_Graph_Proto::Node &node = graph.nodes(i);
 
-	std::cout << std::endl;
+            weights_out << node.id() << " ";
+            conns_out << node.id() << " ";
+
+            for (int j = 0; j < node.adjs_size(); j++)
+            {
+                conns_out << node.adjs(j) << " ";
+                weights_out << node.weights(j) << " ";
+            }
+            conns_out << "\n";
+            weights_out << "\n";
+        }
+
+        sub_graph_idx++;
+        sub_graph = std::to_string(sub_graph_idx) + ".graph";
+        sub_graph_full = graph_root / sub_graph;
     }
+
+    weights_out.close();
+    conns_out.close();
 }
