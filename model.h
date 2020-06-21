@@ -18,6 +18,7 @@ namespace NCC_FrontEnd
 class Model
 {
   protected:
+    // TODO, capture more information from json file.
     class Layer
     {
       public:
@@ -25,6 +26,8 @@ class Model
         // https://towardsdatascience.com/a-comprehensive-introduction-to-different-types-of-convolutions-in-deep-learning-669281e58215
 	// https://medium.com/@zurister/depth-wise-convolution-and-depth-wise-separable-convolution-37346565d4ec
 	// https://machinelearningmastery.com/introduction-to-1x1-convolutions-to-reduce-the-complexity-of-convolutional-neural-networks/
+
+        // Batch-normalization: https://stackoverflow.com/questions/38553927/batch-normalization-in-convolutional-neural-network
         enum class Layer_Type : int
         {
             Input, // the input layer
@@ -38,9 +41,6 @@ class Model
 
         Layer() {}
         Layer(std::string &_name, Layer_Type &_type) : name(_name), layer_type(_type) {}
-
-        // std::string& getName() { return name; }
-        // Layer_Type& getLayerType() { return layer_type; }
 
         void setWeights(std::vector<unsigned> &_w_dims,
                         std::vector<float> &_weights)
@@ -63,6 +63,7 @@ class Model
             output_dims = _dims;
         }
 
+        // Padding type of the layer
         enum class Padding_Type : int
         {
             same,
@@ -107,10 +108,6 @@ class Model
         void connToFlat(unsigned, unsigned);
         void connToDense(unsigned, unsigned);
 
-//      protected:
-//	std::string out_root;
-//        std::ofstream conn_txt;
-
       public:
         Architecture() {}
 
@@ -133,15 +130,7 @@ class Model
         void connector();
 
         void printConns(std::string &out_root);
-/*
-        void setOutputFile(std::string &_root)
-        {
-            out_root = _root;
-            std::string txt = out_root + ".connection_info.txt";
-	    std::cout << txt << "\n";
-            conn_txt.open(txt);
-        }
-*/
+
         void printLayers() // Only used for small network debuggings.
         {
             for (auto &layer : layers)
@@ -223,7 +212,6 @@ class Model
 
     void connector() { arch.connector(); } 
 
-    // void setOutputFile(std::string &out_root) { arch.setOutputFile(out_root); }
     void printConns(std::string &out_root) { arch.printConns(out_root); }
 
   protected:
