@@ -32,6 +32,9 @@ class Model
         {
             Input, // the input layer
             Conv2D, // convolution layer
+            Activation,
+            BatchNormalization,
+            Dropout,
             MaxPooling2D, // max polling layer
             AveragePooling2D,
             Flatten, // flatten layer

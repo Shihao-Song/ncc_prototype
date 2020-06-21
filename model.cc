@@ -30,18 +30,23 @@ void Model::Architecture::connector()
                 connToConv(i, i + 1);
             }
         }
-        if (layers[i + 1].layer_type == Layer::Layer_Type::MaxPooling2D || 
+	else if (layers[i + 1].layer_type == Layer::Layer_Type::MaxPooling2D || 
             layers[i + 1].layer_type == Layer::Layer_Type::AveragePooling2D)
         {
             connToPool(i, i + 1);
         }
-        if (layers[i + 1].layer_type == Layer::Layer_Type::Flatten)
+	else if (layers[i + 1].layer_type == Layer::Layer_Type::Flatten)
         {
             connToFlat(i, i + 1);
         }
-        if (layers[i + 1].layer_type == Layer::Layer_Type::Dense)
+	else if (layers[i + 1].layer_type == Layer::Layer_Type::Dense)
         {
             connToDense(i, i + 1);
+        }
+        else
+        {
+            std::cerr << "Error: unsupported connection type. \n";
+            exit(0);
         }
 
         auto name = layers[i].name;
@@ -705,6 +710,8 @@ void Model::loadArch(std::string &arch_file)
         BOOST_FOREACH(boost::property_tree::ptree::value_type &v, pt.get_child("config.layers"))
         {
             // We need to construct the input layer first
+            // Sometimes, input layer is not explicitly specified. When the input layer is explicitly specified, 
+            // we will change its name later.
             if (layer_counter == 0)
             {
                 std::vector<std::string> input_shape;
@@ -748,14 +755,15 @@ void Model::loadArch(std::string &arch_file)
             else if (class_name == "AveragePooling2D") { layer_type = Layer::Layer_Type::AveragePooling2D; }
             else if (class_name == "Flatten") { layer_type = Layer::Layer_Type::Flatten; }
             else if (class_name == "Dense") { layer_type = Layer::Layer_Type::Dense; }
-            // else { std::cerr << "Error: Unsupported layer type.\n"; exit(0); }
+            else { std::cerr << "Error: Unsupported layer type.\n"; exit(0); }
 
-            if (class_name != "InputLayer" && layer_type != Layer::Layer_Type::MAX)
+            if (class_name != "InputLayer")
             {
                 arch.addLayer(name, layer_type);
             }
             else if (class_name == "InputLayer")
             {
+                // The input layer is explicitly specified, we need to change its name here.
                 std::string default_name = "input";
                 arch.getLayer(default_name).name = name; // When input is explicitly mentioned.
             }
