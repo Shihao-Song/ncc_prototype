@@ -55,10 +55,14 @@ void Model::Architecture::connector()
         std::cout << "Layer name: " << name << "; ";
         if (type == Layer::Layer_Type::Input) { std::cout << "Layer type: Input"; }
         else if (type == Layer::Layer_Type::Conv2D) { std::cout << "Layer type: Conv2D"; }
-        else if(type == Layer::Layer_Type::MaxPooling2D) { std::cout << "Layer type: MaxPooling2D"; }
-        else if(type == Layer::Layer_Type::AveragePooling2D) { std::cout << "Layer type: AveragePooling2D"; }
-        else if(type == Layer::Layer_Type::Flatten) { std::cout << "Layer type: Flatten"; }
-        else if(type == Layer::Layer_Type::Dense) { std::cout << "Layer type: Dense"; }
+        else if (type == Layer::Layer_Type::Activation) { std::cout << "Layer type: Activation"; }
+        else if (type == Layer::Layer_Type::BatchNormalization) { std::cout << "Layer type: BatchNormalization"; }
+        else if (type == Layer::Layer_Type::Dropout) { std::cout << "Layer type: Dropout"; }
+        else if (type == Layer::Layer_Type::MaxPooling2D) { std::cout << "Layer type: MaxPooling2D"; }
+        else if (type == Layer::Layer_Type::AveragePooling2D) { std::cout << "Layer type: AveragePooling2D"; }
+        else if (type == Layer::Layer_Type::Flatten) { std::cout << "Layer type: Flatten"; }
+        else if (type == Layer::Layer_Type::Dense) { std::cout << "Layer type: Dense"; }
+        else { std::cerr << "Error: unsupported layer type\n"; exit(0); }
         std::cout << "\n";
 
         auto &output_dims = layers[i].output_dims;
@@ -751,6 +755,9 @@ void Model::loadArch(std::string &arch_file)
             Layer::Layer_Type layer_type = Layer::Layer_Type::MAX;
             if (class_name == "InputLayer") { layer_type = Layer::Layer_Type::Input; }
             else if (class_name == "Conv2D") { layer_type = Layer::Layer_Type::Conv2D; }
+            else if (class_name == "Activation") { layer_type = Layer::Layer_Type::Activation; }
+            else if (class_name == "BatchNormalization") {layer_type = Layer::Layer_Type::BatchNormalization; }
+            else if (class_name == "Dropout") { layer_type = Layer::Layer_Type::Dropout; }
             else if (class_name == "MaxPooling2D") { layer_type = Layer::Layer_Type::MaxPooling2D; }
             else if (class_name == "AveragePooling2D") { layer_type = Layer::Layer_Type::AveragePooling2D; }
             else if (class_name == "Flatten") { layer_type = Layer::Layer_Type::Flatten; }
@@ -802,6 +809,8 @@ void Model::loadArch(std::string &arch_file)
                 for (auto size : pool_size_str) { pool_size.push_back(stoll(size)); }
                 pool_size.push_back(1); // depth is 1
             }
+
+            // TODO, more information to extract, such as activation method...
 
             layer_counter++;
         }
@@ -864,6 +873,7 @@ void Model::scanGroup(hid_t gid)
         case H5G_DATASET:
             dsid = H5Dopen(gid, memb_name, H5P_DEFAULT);
             H5Iget_name(dsid, ds_name, MAX_NAME);
+            // std::cout << ds_name << "\n";
             extrWeights(dsid);
             break;
         default:
@@ -920,6 +930,38 @@ void Model::extrWeights(hid_t id)
         std::vector<float> rdata_vec(rdata, rdata + data_size);
 
         layer.setBiases(dims_vec, rdata_vec);
+    }
+    else if (tokens[tokens.size() - 1].find("beta") != std::string::npos)
+    {
+        Layer &layer = arch.getLayer(tokens[tokens.size() - 2]);
+        std::vector<unsigned> dims_vec(dims, dims + ndims);
+        std::vector<float> rdata_vec(rdata, rdata + data_size);
+
+        layer.setBeta(dims_vec, rdata_vec);
+    }
+    else if (tokens[tokens.size() - 1].find("gamma") != std::string::npos)
+    {
+        Layer &layer = arch.getLayer(tokens[tokens.size() - 2]);
+        std::vector<unsigned> dims_vec(dims, dims + ndims);
+        std::vector<float> rdata_vec(rdata, rdata + data_size);
+
+        layer.setGamma(dims_vec, rdata_vec);
+    }
+    else if (tokens[tokens.size() - 1].find("moving_mean") != std::string::npos)
+    {
+        Layer &layer = arch.getLayer(tokens[tokens.size() - 2]);
+        std::vector<unsigned> dims_vec(dims, dims + ndims);
+        std::vector<float> rdata_vec(rdata, rdata + data_size);
+
+        layer.setMovingMean(dims_vec, rdata_vec);
+    }
+    else if (tokens[tokens.size() - 1].find("moving_variance") != std::string::npos)
+    {
+        Layer &layer = arch.getLayer(tokens[tokens.size() - 2]);
+        std::vector<unsigned> dims_vec(dims, dims + ndims);
+        std::vector<float> rdata_vec(rdata, rdata + data_size);
+
+        layer.setMovingVariance(dims_vec, rdata_vec);
     }
     free(rdata);
 }

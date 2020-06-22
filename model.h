@@ -61,26 +61,60 @@ class Model
         {
             strides = _strides;
         }
+        void setBeta(std::vector<unsigned> &dims, std::vector<float> &data)
+        {
+            beta_dims = dims;
+            beta = data;
+        }
+        void setGamma(std::vector<unsigned> &dims, std::vector<float> &data)
+        {
+            gamma_dims = dims;
+            gamma = data;
+        }
+        void setMovingMean(std::vector<unsigned> &dims, std::vector<float> &data)
+        {
+            moving_mean_dims = dims;
+            moving_mean = data;
+        }
+        void setMovingVariance(std::vector<unsigned> &dims, std::vector<float> &data)
+        {
+            moving_variance_dims = dims;
+            moving_variance = data;
+        }
         void setOutputDim(std::vector<unsigned> &_dims)
         {
             output_dims = _dims;
         }
 
-        // Padding type of the layer
+        std::string name; // Name of the layer
+
+        // weights/biases for CONV2D/Dense
+        std::vector<unsigned> w_dims; // dims of the weights
+        std::vector<float> weights; // all the weight
+        std::vector<unsigned> b_dims; // dims of the bias
+        std::vector<float> bias; // all the bias
+
+        // Padding type of the layer, used for CONV2D
         enum class Padding_Type : int
         {
             same,
             valid
         }padding_type = Padding_Type::valid;
-
-        std::string name; // Name of the layer
-	std::vector<unsigned> w_dims; // dims of the weights
-        std::vector<float> weights; // all the weight
-        std::vector<unsigned> b_dims; // dims of the bias
-        std::vector<float> bias; // all the bias
-
+        // strides, used for CONV2D/MaxPooling/AveragePooling
         std::vector<unsigned> strides;
 
+        // TODO, need to extract more information
+        // For batch-normalization
+        std::vector<unsigned> beta_dims;
+        std::vector<float> beta;
+        std::vector<unsigned> gamma_dims;
+        std::vector<float> gamma;
+        std::vector<unsigned> moving_mean_dims;
+        std::vector<float> moving_mean;
+        std::vector<unsigned> moving_variance_dims;
+        std::vector<float> moving_variance;
+
+        // The output of the layer, including the dimension and the output neurons IDs.
         std::vector<unsigned> output_dims; // dimension of output
         std::vector<uint64_t> output_neuron_ids;
     };
@@ -107,6 +141,9 @@ class Model
 
         void connToConv(unsigned, unsigned);
         void connToConvPadding(unsigned, unsigned);
+        void connToAct(unsigned, unsigned);
+        void connToNorm(unsigned, unsigned);
+        void connToDrop(unsigned, unsigned);
         void connToPool(unsigned, unsigned);
         void connToFlat(unsigned, unsigned);
         void connToDense(unsigned, unsigned);
@@ -144,10 +181,14 @@ class Model
                 std::cout << "Layer name: " << name << "; ";
                 if (type == Layer::Layer_Type::Input) { std::cout << "Layer type: Input"; }
 		else if (type == Layer::Layer_Type::Conv2D) { std::cout << "Layer type: Conv2D"; }
-                else if(type == Layer::Layer_Type::MaxPooling2D) { std::cout << "Layer type: MaxPooling2D"; }
-                else if(type == Layer::Layer_Type::AveragePooling2D) { std::cout << "Layer type: AveragePooling2D"; }
-                else if(type == Layer::Layer_Type::Flatten) { std::cout << "Layer type: Flatten"; }
-                else if(type == Layer::Layer_Type::Dense) { std::cout << "Layer type: Dense"; }
+                else if (type == Layer::Layer_Type::Activation) { std::cout << "Layer type: Activation"; }
+                else if (type == Layer::Layer_Type::BatchNormalization) { std::cout << "Layer type: BatchNormalization"; }
+                else if (type == Layer::Layer_Type::Dropout) { std::cout << "Layer type: Dropout"; }
+                else if (type == Layer::Layer_Type::MaxPooling2D) { std::cout << "Layer type: MaxPooling2D"; }
+                else if (type == Layer::Layer_Type::AveragePooling2D) { std::cout << "Layer type: AveragePooling2D"; }
+                else if (type == Layer::Layer_Type::Flatten) { std::cout << "Layer type: Flatten"; }
+                else if (type == Layer::Layer_Type::Dense) { std::cout << "Layer type: Dense"; }
+                else { std::cerr << "Error: unsupported layer type\n"; exit(0); }
                 std::cout << "\n";
 /*
                 std::cout << "Dimension: ";
