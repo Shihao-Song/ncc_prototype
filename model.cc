@@ -30,6 +30,18 @@ void Model::Architecture::connector()
                 connToConv(i, i + 1);
             }
         }
+	else if (layers[i + 1].layer_type == Layer::Layer_Type::Activation)
+        {
+            connToAct(i, i + 1);
+        }
+        else if (layers[i + 1].layer_type == Layer::Layer_Type::BatchNormalization)
+        {
+            connToNorm(i, i + 1);
+        }
+        else if (layers[i + 1].layer_type == Layer::Layer_Type::Dropout)
+        {
+            connToDrop(i, i + 1);
+        }
 	else if (layers[i + 1].layer_type == Layer::Layer_Type::MaxPooling2D || 
             layers[i + 1].layer_type == Layer::Layer_Type::AveragePooling2D)
         {
@@ -427,6 +439,21 @@ void Model::Architecture::connToConvPadding(unsigned cur_layer_id, unsigned next
         std::cout << "\n";
     }
 */
+}
+
+void Model::Architecture::connToAct(unsigned cur_layer_id, unsigned next_layer_id)
+{
+
+}
+        
+void Model::Architecture::connToNorm(unsigned cur_layer_id, unsigned next_layer_id)
+{
+
+}
+
+void Model::Architecture::connToDrop(unsigned cur_layer_id, unsigned next_layer_id)
+{
+
 }
 
 void Model::Architecture::connToPool(unsigned cur_layer_id, unsigned next_layer_id)

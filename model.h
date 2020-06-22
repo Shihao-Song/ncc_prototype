@@ -217,7 +217,11 @@ class Model
                 auto &output_dims = layer.output_dims;
                 std::cout << "Output shape: ";
                 for (auto dim : output_dims) { std::cout << dim << " "; }
-                std::cout << "\n\n";
+                std::cout << "\n";
+                // TODO, print neuron ID range
+                auto &out_neuro_ids = layer.output_neuron_ids;
+                std::cout << "Output neuron id range: "
+                          << out_neuro_ids[0] << " -> " << out_neuro_ids[out_neuro_ids.size() - 1] << "\n\n";
 /*
                 auto &out_neuro_ids = layer.output_neuron_ids;
                 std::cout << "Output neuron id: ";
