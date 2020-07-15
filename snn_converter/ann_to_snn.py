@@ -1,4 +1,5 @@
-"""This module provides Python3 API support for converting
+"""
+This module provides Python3 API support for converting
 an analog neural network to a spiking neural network using the
 snntoolbox.
 """
