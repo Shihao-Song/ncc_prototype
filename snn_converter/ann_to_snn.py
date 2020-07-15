@@ -155,13 +155,3 @@ def create_sample_cnn():
     keras.models.save_model(model, os.path.join(path_wd, model_name + '.h5'))
 
     return (path_wd, model_name)
-
-
-# def test():
-#    (path_wd, model_name) = create_sample_cnn()
-#    print(path_wd)
-#    print(model_name)
-    #convert_ann_to_snn(path_wd, model_name)
-
-
-# test()
