@@ -1,27 +1,43 @@
 #include <Python.h>
 
 #include <stdlib.h>
-// #include <Python.h>
+#include <string.h>
 
 /* convert_ann_to_snn is a C++ wrapper to call the convert_ann_to_snn 
 Python implementation of converting an analog neural network to a spiking
 neural network. */
 void convert_ann_to_snn(char *path_wd, char *model_name)
 {
-    /* TODO - Try copying the snntoolbox locally*/
     setenv("PYTHONPATH", ".", 1);
     Py_Initialize();
 
     /* First, import the ann_to_snn module */
     PyObject *ann_to_snn_module_string = PyUnicode_FromString((char *)"ann_to_snn");
-    PyErr_Print();
+    if (!ann_to_snn_module_string)
+    {
+        PyErr_Print();
+        return;
+    }
 
     PyObject *ann_to_snn_module = PyImport_Import(ann_to_snn_module_string);
-    PyErr_Print();
+    if (!ann_to_snn_module)
+    {
+        PyErr_Print();
+        return;
+    }
     /* Now, get a reference for the "convert_ann_to_snn" function */
     PyObject *convert_ann_to_snn_function = PyObject_GetAttrString(ann_to_snn_module, (char *)"convert_ann_to_snn");
+    if (!convert_ann_to_snn_function)
+    {
+        PyErr_Print();
+        return;
+    }
     PyObject *args = PyTuple_Pack(2, PyUnicode_FromString(path_wd), PyUnicode_FromString(model_name));
-
+    if (!args)
+    {
+        PyErr_Print();
+        return;
+    }
     /* Run the function (convert_ann_to_snn has no return value) */
     PyObject *result = PyObject_CallObject(convert_ann_to_snn_function, args);
 
@@ -43,39 +59,78 @@ void create_sample_cnn(char *path_wd, char *model_name)
 
     /* Build the name object */
     PyObject *pName = PyUnicode_FromString((char *)"ann_to_snn");
+    if (!pName)
+    {
+        PyErr_Print();
+        return;
+    }
 
     /* Load the module object */
     PyObject *pModule = PyImport_Import(pName);
-    PyErr_Print();
+    if (!pModule)
+    {
+        PyErr_Print();
+        return;
+    }
+
     PyObject *pDict = PyModule_GetDict(pModule);
+    if (!pDict)
+    {
+        PyErr_Print();
+        return;
+    }
 
     PyObject *pFunc = PyDict_GetItemString(pDict, (char *)"create_sample_cnn");
+    if (!pFunc)
+    {
+        PyErr_Print();
+        return;
+    }
 
+    /* Allocate object to store return value */
     PyObject *pResult;
+
     if (PyCallable_Check(pFunc))
     {
+        /* Let args be empty since pFunc for "create_sample_cnn" does not accept arguments */
         PyObject *args;
         pResult = PyObject_CallObject(pFunc, args);
-        PyErr_Print();
+        if (!pResult)
+        {
+            PyErr_Print();
+            return;
+        }
     }
     else
     {
         PyErr_Print();
+        return;
     }
+    /* "create_sample_cnn" returns a tuple, so we need to break it down and extract the results */
     PyObject *pathObject = PySequence_GetItem(pResult, 0);
-    PyObject *modelObject = PySequence_GetItem(pResult, 1);
     if (!pathObject)
     {
-        printf("error\n");
+        PyErr_Print();
+        return;
     }
+
+    PyObject *modelObject = PySequence_GetItem(pResult, 1);
     if (!modelObject)
     {
-        printf("error\n");
+        PyErr_Print();
+        return;
     }
 
     Py_ssize_t size;
-    const char *ptr = PyUnicode_AsUTF8AndSize(pathObject, &size);
-    const char *ptr2 = PyUnicode_AsUTF8AndSize(modelObject, &size);
+    const char *path_wd_ptr = PyUnicode_AsUTF8AndSize(pathObject, &size);
+    path_wd = (char *)malloc((size + 1) * sizeof(char));
+    strcpy(path_wd, path_wd_ptr);
+    printf("path_wd = %s\n", path_wd);
+
+    const char *model_name_ptr = PyUnicode_AsUTF8AndSize(modelObject, &size);
+    model_name = (char *)malloc((size + 1) * sizeof(char));
+    strcpy(model_name, model_name_ptr);
+    printf("model_name = %s\n", model_name);
 
     Py_DECREF(pModule);
     Py_DECREF(pName);
@@ -86,7 +141,12 @@ void create_sample_cnn(char *path_wd, char *model_name)
 
 int main(int argc, char *argv[])
 {
-    create_sample_cnn((char *)"", (char *)"");
-    //convert_ann_to_snn((char *)"/Users/jake/Code/ncc_prototype/temp/1594768532.239394", (char *)"mnist_cnn");
+    char *path_wd;
+    char *model_name;
+    //create_sample_cnn(path_wd, model_name);
+    //printf("path_wd = %s\n", path_wd);
+    free(path_wd);
+    free(model_name);
+    convert_ann_to_snn((char *)"/Users/jake/Code/ncc_prototype/temp/1594768532.239394", (char *)"mnist_cnn");
     return 0;
 }
