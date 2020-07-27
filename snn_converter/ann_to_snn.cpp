@@ -139,7 +139,7 @@ void create_sample_cnn(char **path_wd, char **model_name)
     return;
 }
 
-int main(int argc, char *argv[])
+/*int main(int argc, char *argv[])
 {
     char *path_wd;
     char *model_name;
@@ -152,4 +152,4 @@ int main(int argc, char *argv[])
     long batch_size = 50;
     //convert_ann_to_snn((char *)"/Users/jake/Code/ncc_prototype/temp/1594768532.239394", (char *)"mnist_cnn", duration, num_to_test, batch_size);
     return 0;
-}
+}*/
