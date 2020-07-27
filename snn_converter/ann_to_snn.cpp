@@ -6,7 +6,7 @@
 /* convert_ann_to_snn is a C++ wrapper to call the convert_ann_to_snn 
 Python implementation of converting an analog neural network to a spiking
 neural network. */
-void convert_ann_to_snn(char *path_wd, char *model_name, long duration, long num_to_test, long batch_size)
+void convert_ann_to_snn(const char *path_wd, const char *model_name, long duration, long num_to_test, long batch_size)
 {
     setenv("PYTHONPATH", ".", 1);
     Py_Initialize();
