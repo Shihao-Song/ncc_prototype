@@ -51,7 +51,7 @@ void convert_ann_to_snn(char *path_wd, char *model_name, long duration, long num
 
 /* create_sample_cnn is a C++ wrapper to generate a sample convolutional 
 neural network. */
-void create_sample_cnn(char *path_wd, char *model_name)
+void create_sample_cnn(char **path_wd, char **model_name)
 {
     /* Set the PYTHONPATH to the working directory */
     setenv("PYTHONPATH", ".", 1);
@@ -123,14 +123,14 @@ void create_sample_cnn(char *path_wd, char *model_name)
     // create_sample_cnn(char**, char**) create_sample_cnn(&path_wd, &model_name)
     Py_ssize_t size;
     const char *path_wd_ptr = PyUnicode_AsUTF8AndSize(pathObject, &size);
-    path_wd = (char *)malloc((size + 1) * sizeof(char)); // reference pointer, then malloc *path_wd = malloc
-    strcpy(path_wd, path_wd_ptr);
-    printf("path_wd = %s\n", path_wd);
+    *path_wd = (char *)malloc((size + 1) * sizeof(char)); // reference pointer, then malloc *path_wd = malloc
+    strcpy(*path_wd, path_wd_ptr);
+    //printf("path_wd = %s\n", *path_wd);
 
     const char *model_name_ptr = PyUnicode_AsUTF8AndSize(modelObject, &size);
-    model_name = (char *)malloc((size + 1) * sizeof(char));
-    strcpy(model_name, model_name_ptr);
-    printf("model_name = %s\n", model_name);
+    *model_name = (char *)malloc((size + 1) * sizeof(char));
+    strcpy(*model_name, model_name_ptr);
+    //printf("model_name = %s\n", *model_name);
 
     Py_DECREF(pModule);
     Py_DECREF(pName);
@@ -143,13 +143,13 @@ int main(int argc, char *argv[])
 {
     char *path_wd;
     char *model_name;
-    //create_sample_cnn(path_wd, model_name);
+    create_sample_cnn(&path_wd, &model_name);
     //printf("path_wd = %s\n", path_wd);
     free(path_wd);
     free(model_name);
     long duration = 50;
     long num_to_test = 100;
     long batch_size = 50;
-    convert_ann_to_snn((char *)"/Users/jake/Code/ncc_prototype/temp/1594768532.239394", (char *)"mnist_cnn", duration, num_to_test, batch_size);
+    //convert_ann_to_snn((char *)"/Users/jake/Code/ncc_prototype/temp/1594768532.239394", (char *)"mnist_cnn", duration, num_to_test, batch_size);
     return 0;
 }
