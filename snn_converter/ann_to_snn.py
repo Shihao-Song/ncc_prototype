@@ -19,7 +19,7 @@ from tensorflow.keras.datasets import mnist
 from tensorflow.keras.utils import to_categorical
 
 
-def convert_ann_to_snn(path_wd, model_name):
+def convert_ann_to_snn(path_wd, model_name, duration, num_to_test, batch_size):
     """
     convert_ann_to_snn accepts the path to a trained ANN 
     and converts it to a SNN using the snntoolbox.
@@ -41,14 +41,21 @@ def convert_ann_to_snn(path_wd, model_name):
         'normalize': True
     }
 
+    # Add a conversion section, pooling operation should probably exposed
+    config['conversion'] = {
+        'max2avg_pool': True
+    }
+
     config['simulation'] = {
         # Chooses execution backend of SNN toolbox.
         'simulator': 'INI',
         # Number of time steps to run each sample.
-        'duration': 50,
-        'num_to_test': 100,             # How many test samples to run.
-        'batch_size': 50,               # Batch size for simulation.
-        'keras_backend': 'tensorflow'   # Which keras backend to use.
+        # This needs to be configurable, default 50 and let the user set as needed
+        'duration': duration,
+        # How many test samples to run.
+        'num_to_test': num_to_test,
+        'batch_size': batch_size,               # Batch size for simulation.
+        'keras_backend': 'tensorflow'   # Which keras backend to use. Extracted from ANN
     }
 
     config['output'] = {

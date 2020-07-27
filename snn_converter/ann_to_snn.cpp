@@ -6,7 +6,7 @@
 /* convert_ann_to_snn is a C++ wrapper to call the convert_ann_to_snn 
 Python implementation of converting an analog neural network to a spiking
 neural network. */
-void convert_ann_to_snn(char *path_wd, char *model_name)
+void convert_ann_to_snn(char *path_wd, char *model_name, long duration, long num_to_test, long batch_size)
 {
     setenv("PYTHONPATH", ".", 1);
     Py_Initialize();
@@ -32,7 +32,7 @@ void convert_ann_to_snn(char *path_wd, char *model_name)
         PyErr_Print();
         return;
     }
-    PyObject *args = PyTuple_Pack(2, PyUnicode_FromString(path_wd), PyUnicode_FromString(model_name));
+    PyObject *args = PyTuple_Pack(5, PyUnicode_FromString(path_wd), PyUnicode_FromString(model_name), PyLong_FromLong(duration), PyLong_FromLong(num_to_test), PyLong_FromLong(batch_size));
     if (!args)
     {
         PyErr_Print();
@@ -120,10 +120,10 @@ void create_sample_cnn(char *path_wd, char *model_name)
         PyErr_Print();
         return;
     }
-
+    // create_sample_cnn(char**, char**) create_sample_cnn(&path_wd, &model_name)
     Py_ssize_t size;
     const char *path_wd_ptr = PyUnicode_AsUTF8AndSize(pathObject, &size);
-    path_wd = (char *)malloc((size + 1) * sizeof(char));
+    path_wd = (char *)malloc((size + 1) * sizeof(char)); // reference pointer, then malloc *path_wd = malloc
     strcpy(path_wd, path_wd_ptr);
     printf("path_wd = %s\n", path_wd);
 
@@ -147,6 +147,9 @@ int main(int argc, char *argv[])
     //printf("path_wd = %s\n", path_wd);
     free(path_wd);
     free(model_name);
-    convert_ann_to_snn((char *)"/Users/jake/Code/ncc_prototype/temp/1594768532.239394", (char *)"mnist_cnn");
+    long duration = 50;
+    long num_to_test = 100;
+    long batch_size = 50;
+    convert_ann_to_snn((char *)"/Users/jake/Code/ncc_prototype/temp/1594768532.239394", (char *)"mnist_cnn", duration, num_to_test, batch_size);
     return 0;
 }
