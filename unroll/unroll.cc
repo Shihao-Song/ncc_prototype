@@ -2,6 +2,7 @@
 #include <fstream>
 #include <string>
 #include <boost/tokenizer.hpp>
+#include <algorithm>
 #include <vector>
 #include "unroll.h"
 
@@ -182,10 +183,16 @@ std::vector<Neuron> unroll_neuron(Neuron n, int start_idx)
     return unrolled_neurons;
 }
 
-std::vector<int> argsort(std::vector<int> arg)
+std::vector<int> argsort(std::vector<int> data)
 {
-    /* reverse, then sort */
-    return arg;
+    std::vector<int> index(data.size(), 0);
+    for (int i = 0; i != index.size(); i++)
+    {
+        index[i] = i;
+    }
+    auto comparator = [&data](int a, int b) { return data[a] < data[b]; };
+    std::sort(index.begin(), index.end(), comparator);
+    return index;
 }
 
 void unroll_snn(std::vector<Neuron> snn)
@@ -204,7 +211,9 @@ void unroll_snn(std::vector<Neuron> snn)
         }
     }
 
-    std::vector<int> sorted_neuron_id = agrsort(fanins);
+    std::reverse(fanins.begin(), fanins.end());
+    std::vector<int> sorted_neuron_id = argsort(fanins);
+
     std::vector<Neuron> unrolled_neurons;
     int next_neuron_id = snn.size();
     for (i = 0; i < sorted_neuron_id.size(); i++)
@@ -218,14 +227,113 @@ void unroll_snn(std::vector<Neuron> snn)
         {
             std::vector<Neuron> more = unroll_neuron(n, next_neuron_id);
             unrolled_neurons.insert(unrolled_neurons.end(), more.begin(), more.end());
-                }
-    }
 
+            unrolled_neurons[unrolled_neurons.size() - 1].set_id(n.get_id());
+            snn[idx] = unrolled_neurons[unrolled_neurons.size() - 1];
+            unrolled_neurons.pop_back();
+
+            next_neuron_id = snn.size() + unrolled_neurons.size();
+        }
+    }
+    usnn.reserve(snn.size() + unrolled_neurons.size());
+    usnn.insert(usnn.end(), snn.begin(), snn.end());
+    usnn.insert(usnn.end(), unrolled_neurons.begin(), unrolled_neurons.end());
     return;
 }
 
+
 void unroll_generic(std::vector<Neuron> snn, int max_fanin)
 {
+    std::vector<int> neuron_ids;
+    int i;
+
+    for (i = 0; i < snn.size(); i++)
+    {
+        neuron_ids.push_back(snn[i].get_id());
+    }
+
+    int max_neuron_id = *std::max_element(neuron_ids.begin(), neuron_ids.end());
+
+    std::vector<Neuron> usnn;
+
+    int cnt = snn.size();
+    for (i = 0; i < snn.size(); i++)
+    {
+        Neuron n = snn[i];
+        std::vector<int> fanins = n.get_input_list();
+        if (fanins.size() <= max_fanin)
+        {
+            usnn.push_back(n);
+        }
+        else
+        {
+            int x = fanins.size() - 1;
+            int y = max_fanin - 1;
+
+            int number_unrolled_neurons = x / y + bool(x % y);
+            if (number_unrolled_neurons <= 1)
+            {
+                number_unrolled_neurons = 1;
+            }
+
+            int si = 0;
+            int ei = max_fanin;
+            int used_inputs = 0;
+            std::vector<int> input_from_previous_unit;
+            int parent = -1;
+            int j;
+            for (j = 0; j < number_unrolled_neurons - 1; j++)
+            {
+                Neuron new_neuron = Neuron(cnt);
+                std::vector<int> spike_times;
+                int n;
+                for (n = si; n < ei; n++)
+                {
+                    std::vector<int> more = snn[n].get_spike_times();
+                    spike_times.insert(spike_times.end(), more.begin(), more.end());
+                }
+                std::unique(spike_times.begin(), spike_times.end());
+                Spike new_spike = Spike(cnt);
+                new_spike.add_spike_times(spike_times); // fix this.
+                new_neuron.add_spike(new_spike);
+
+                std::vector<int> new_fanins;
+                new_fanins.reserve(ei - si + input_from_previous_unit.size());
+                new_fanins.insert(new_fanins.end(), fanins[si], fanins[ei]);
+                new_fanins.insert(new_fanins.end(), input_from_previous_unit.begin(), input_from_previous_unit.end());
+
+                new_neuron.add_input_list(new_fanins);
+                used_inputs += ei - si;
+                si = ei;
+                ei += max_fanin - 1;
+                input_from_previous_unit.clear();
+                    input_from_previous_unit.push_back(cnt);
+                new_neuron.add_output(cnt + 1);
+                new_neuron.add_parent(parent);
+                parent = cnt;
+                usnn.push_back(new_neuron);
+                cnt++;
+            }
+
+            if (fanins.size() - used_inputs + 1 <= max_fanin){
+                Neuron new_neuron = Neuron(n.get_id());
+                std::vector<int> new_fanins;
+                new_fanins.reserve(ei - si + input_from_previous_unit.size());
+                new_fanins.insert(new_fanins.end(), fanins[si], fanins[ei]);
+                new_fanins.insert(new_fanins.end(), input_from_previous_unit.begin(), input_from_previous_unit.end());
+                used_inputs += ei-si;
+                new_neuron.add_input_list(new_fanins);
+                new_neuron.add_output_list(n.get_output_list());
+                new_neuron.add_parent(parent);
+                parent = -1;
+
+                Spike new_spike = Spike(n.get_id());
+                new_spike.add_spike_times(n.get_spike_times());
+                new_neuron.add_spike(new_spike);
+                usnn.push_back(new_neuron);
+            }
+        }
+    }
 
     return;
 }

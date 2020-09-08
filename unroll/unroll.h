@@ -59,11 +59,13 @@ public:
     void add_output_list(std::vector<int>);
     void add_spike(Spike);
     void add_parent(int);
+    void set_id(int);
     int get_id() { return neuron_id; };
     int get_parent() { return parent; };
     Spike get_spike() { return spk; };
     std::vector<int> get_input_list() { return inEdges; };
     std::vector<int> get_output_list() { return outEdges; };
+    std::vector<int> get_spike_times() { return spk.get_spike_times(); };
 };
 
 Neuron::Neuron()
@@ -79,6 +81,11 @@ Neuron::Neuron(int id)
 void Neuron::add_input(int in)
 {
     inEdges.push_back(in);
+}
+
+void Neuron::set_id(int id)
+{
+    neuron_id = id;
 }
 
 void Neuron::add_output(int out)
