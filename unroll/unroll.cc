@@ -242,7 +242,7 @@ void unroll_snn(std::vector<Neuron> snn)
 }
 
 
-void unroll_generic(std::vector<Neuron> snn, int max_fanin)
+std::vector<Neuron> unroll_generic(std::vector<Neuron> snn, int max_fanin)
 {
     std::vector<int> neuron_ids;
     int i;
@@ -335,11 +335,11 @@ void unroll_generic(std::vector<Neuron> snn, int max_fanin)
         }
     }
 
-    return;
+    return usnn;
 }
 
 int main()
 {
     std::vector<Neuron> snn = read_connection_info("LeNet.connection_info.txt", "LeNet.weight_info.txt");
-    printf("%lu\n", snn[100].get_input_list().size());
+    std::vector<Neuron> usnn = unroll_generic(snn, 2);
 }
