@@ -22,6 +22,8 @@ public:
 Spike::Spike()
 {
     source_id = -1;
+    nspikes = 0;
+    spike_times = std::vector<int>();
 }
 
 Spike::Spike(int sid)
@@ -71,6 +73,10 @@ public:
 Neuron::Neuron()
 {
     neuron_id = -1;
+    inEdges = std::vector<int>();
+    outEdges = std::vector<int>();
+    parent = -1;
+    spk = Spike();
 }
 
 Neuron::Neuron(int id)

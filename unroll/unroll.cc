@@ -241,7 +241,6 @@ void unroll_snn(std::vector<Neuron> snn)
     return;
 }
 
-
 std::vector<Neuron> unroll_generic(std::vector<Neuron> snn, int max_fanin)
 {
     std::vector<int> neuron_ids;
@@ -307,7 +306,7 @@ std::vector<Neuron> unroll_generic(std::vector<Neuron> snn, int max_fanin)
                 si = ei;
                 ei += max_fanin - 1;
                 input_from_previous_unit.clear();
-                    input_from_previous_unit.push_back(cnt);
+                input_from_previous_unit.push_back(cnt);
                 new_neuron.add_output(cnt + 1);
                 new_neuron.add_parent(parent);
                 parent = cnt;
@@ -315,13 +314,14 @@ std::vector<Neuron> unroll_generic(std::vector<Neuron> snn, int max_fanin)
                 cnt++;
             }
 
-            if (fanins.size() - used_inputs + 1 <= max_fanin){
+            if (fanins.size() - used_inputs + 1 <= max_fanin)
+            {
                 Neuron new_neuron = Neuron(n.get_id());
                 std::vector<int> new_fanins;
                 new_fanins.reserve(ei - si + input_from_previous_unit.size());
                 new_fanins.insert(new_fanins.end(), fanins[si], fanins[ei]);
                 new_fanins.insert(new_fanins.end(), input_from_previous_unit.begin(), input_from_previous_unit.end());
-                used_inputs += ei-si;
+                used_inputs += ei - si;
                 new_neuron.add_input_list(new_fanins);
                 new_neuron.add_output_list(n.get_output_list());
                 new_neuron.add_parent(parent);
@@ -338,8 +338,15 @@ std::vector<Neuron> unroll_generic(std::vector<Neuron> snn, int max_fanin)
     return usnn;
 }
 
-int main()
+int main(int argc, char **argv)
 {
+    //std::vector<Neuron> snn = read_connection_info(argv[1], argv[2]);
     std::vector<Neuron> snn = read_connection_info("LeNet.connection_info.txt", "LeNet.weight_info.txt");
     std::vector<Neuron> usnn = unroll_generic(snn, 2);
+    int i;
+    for (i = 0; i < usnn.size(); i++)
+    {
+        printf("%d\n", usnn[i].get_id());
+    }
+    return 0;
 }
