@@ -338,15 +338,44 @@ std::vector<Neuron> unroll_generic(std::vector<Neuron> snn, int max_fanin)
     return usnn;
 }
 
+void write_usnn(std::vector<Neuron> usnn, const std::string out_name)
+{
+    std::fstream file;
+    file.open(out_name, std::fstream::out);
+
+    int i;
+    for (i = 0; i < usnn.size(); i++)
+    {
+        Neuron tmp = usnn[i];
+        file << tmp.get_id();
+        file << " ";
+
+        int j;
+        std::vector<int> out_list = tmp.get_output_list();
+        for (j = 0; j < out_list.size(); j++)
+        {
+            if (j == out_list.size() - 1)
+            {
+                file << out_list[j];
+                file << "\n";
+                continue;
+            }
+            file << out_list[j];
+            file << " ";
+        }
+
+        // write the neuron's id as the first item in the line
+        // then write the neuron's output
+    }
+    file.close();
+    return;
+}
+
 int main(int argc, char **argv)
 {
     //std::vector<Neuron> snn = read_connection_info(argv[1], argv[2]);
     std::vector<Neuron> snn = read_connection_info("LeNet.connection_info.txt", "LeNet.weight_info.txt");
     std::vector<Neuron> usnn = unroll_generic(snn, 2);
-    int i;
-    for (i = 0; i < usnn.size(); i++)
-    {
-        printf("%d\n", usnn[i].get_id());
-    }
+    write_usnn(usnn, "test.txt");
     return 0;
 }
