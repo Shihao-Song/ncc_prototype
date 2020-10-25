@@ -47,8 +47,8 @@ class Neuron
 {
 private:
     int neuron_id;
-    std::vector<int> inEdges;
-    std::vector<int> outEdges;
+    std::vector<int> inEdges = {};
+    std::vector<int> outEdges = {};
     Spike spk;
     int parent;
 
@@ -82,6 +82,8 @@ Neuron::Neuron()
 Neuron::Neuron(int id)
 {
     neuron_id = id;
+    parent = -1;
+    spk = Spike();
 }
 
 void Neuron::add_input(int in)

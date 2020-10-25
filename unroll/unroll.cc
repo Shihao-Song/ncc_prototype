@@ -92,9 +92,10 @@ std::vector<Neuron> read_connection_info(const std::string connection_file_name,
         snn.push_back(new_neuron);
     }
     std::vector<Spike> spikes = read_spike_info(spike_file_name);
-    for (i = 0; i < spikes.size(); i++)
+    unsigned long j;
+    for (j = 0; j < spikes.size(); j++)
     {
-        snn[spikes[i].get_source_id()].add_spike(spikes[i]);
+        snn[spikes[j].get_source_id()].add_spike(spikes[j]);
     }
 
     std::fstream file;
@@ -119,7 +120,8 @@ std::vector<Neuron> read_connection_info(const std::string connection_file_name,
             }
             if (first)
             {
-                first = false;
+                source_neuron = std::stoi(*i);
+		first = false;
                 continue;
             }
 
@@ -127,8 +129,7 @@ std::vector<Neuron> read_connection_info(const std::string connection_file_name,
             edgeList.push_back(edge);
         }
 
-        int j;
-
+        unsigned long j;
         for (j = 0; j < edgeList.size(); j++)
         {
             snn[source_neuron].add_output(edgeList[j]);
@@ -186,7 +187,7 @@ std::vector<Neuron> unroll_neuron(Neuron n, int start_idx)
 std::vector<int> argsort(std::vector<int> data)
 {
     std::vector<int> index(data.size(), 0);
-    for (int i = 0; i != index.size(); i++)
+    for (unsigned long i = 0; i != index.size(); i++)
     {
         index[i] = i;
     }
@@ -198,13 +199,13 @@ std::vector<int> argsort(std::vector<int> data)
 void unroll_snn(std::vector<Neuron> snn)
 {
     std::vector<Neuron> usnn;
-    int i;
+    unsigned long i;
     std::vector<int> fanins;
 
     for (i = 0; i < snn.size(); i++)
     {
         std::vector<int> n = snn[i].get_input_list();
-        int j;
+        unsigned long j;
         for (j = 0; j < n.size(); j++)
         {
             fanins.push_back(n[j]);
@@ -241,10 +242,10 @@ void unroll_snn(std::vector<Neuron> snn)
     return;
 }
 
-std::vector<Neuron> unroll_generic(std::vector<Neuron> snn, int max_fanin)
+std::vector<Neuron> unroll_generic(std::vector<Neuron> snn, unsigned long max_fanin)
 {
     std::vector<int> neuron_ids;
-    int i;
+    unsigned long i;
 
     for (i = 0; i < snn.size(); i++)
     {
@@ -255,7 +256,7 @@ std::vector<Neuron> unroll_generic(std::vector<Neuron> snn, int max_fanin)
 
     std::vector<Neuron> usnn;
 
-    int cnt = snn.size();
+    unsigned long cnt = snn.size();
     for (i = 0; i < snn.size(); i++)
     {
         Neuron n = snn[i];
@@ -276,7 +277,7 @@ std::vector<Neuron> unroll_generic(std::vector<Neuron> snn, int max_fanin)
             }
 
             int si = 0;
-            int ei = max_fanin;
+            int ei = max_fanin-1;
             int used_inputs = 0;
             std::vector<int> input_from_previous_unit;
             int parent = -1;
@@ -285,10 +286,10 @@ std::vector<Neuron> unroll_generic(std::vector<Neuron> snn, int max_fanin)
             {
                 Neuron new_neuron = Neuron(cnt);
                 std::vector<int> spike_times;
-                int n;
-                for (n = si; n < ei; n++)
+                int nn;
+                for (nn = si; nn < ei; nn++)
                 {
-                    std::vector<int> more = snn[n].get_spike_times();
+                    std::vector<int> more = snn[nn].get_spike_times();
                     spike_times.insert(spike_times.end(), more.begin(), more.end());
                 }
                 std::unique(spike_times.begin(), spike_times.end());
@@ -319,7 +320,7 @@ std::vector<Neuron> unroll_generic(std::vector<Neuron> snn, int max_fanin)
                 Neuron new_neuron = Neuron(n.get_id());
                 std::vector<int> new_fanins;
                 new_fanins.reserve(ei - si + input_from_previous_unit.size());
-                new_fanins.insert(new_fanins.end(), fanins[si], fanins[ei]);
+		new_fanins.insert(new_fanins.end(), fanins[si], fanins[ei]);
                 new_fanins.insert(new_fanins.end(), input_from_previous_unit.begin(), input_from_previous_unit.end());
                 used_inputs += ei - si;
                 new_neuron.add_input_list(new_fanins);
@@ -343,14 +344,14 @@ void write_usnn(std::vector<Neuron> usnn, const std::string out_name)
     std::fstream file;
     file.open(out_name, std::fstream::out);
 
-    int i;
+    unsigned long i;
     for (i = 0; i < usnn.size(); i++)
     {
         Neuron tmp = usnn[i];
         file << tmp.get_id();
         file << " ";
 
-        int j;
+        unsigned long j;
         std::vector<int> out_list = tmp.get_output_list();
         for (j = 0; j < out_list.size(); j++)
         {
