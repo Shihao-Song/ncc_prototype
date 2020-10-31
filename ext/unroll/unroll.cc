@@ -429,15 +429,15 @@ void Model::readConnections(const std::string connection_file_name)
         lcount++;
     }
     file.close();
-
-    // for (auto &neuron : snn) { neuron.print_connections(); }
 }
 
 // A simple proof-of-concept version of unroll
 void Model::unroll(unsigned max_fanin)
 {
+    // for (auto &neuron : snn) { neuron.print_connections(); }
+
     // Initialize the unrolled neurons
-    for (auto i = 0; i <= snn.size(); i++)
+    for (auto i = 0; i < snn.size(); i++)
     {
         // emplace_back should be more space-efficient than push_back
         usnn.emplace_back(i);
@@ -446,8 +446,85 @@ void Model::unroll(unsigned max_fanin)
     // Look for all the neurons that have more than max_fanin number of inputs
     for (auto &neuron : snn)
     {
+        unsigned prev_unrolling_neuron_id = usnn.size();
+        unsigned cur_unrolling_neuron_id = usnn.size();
 
+        auto &input_neurons = neuron.get_input_list();
+        // Check if the number of inputs exceed max_fanin
+        if (input_neurons.size() > max_fanin)
+        {
+            // std::cout << neuron.get_id() << "\n";
+
+            // We need total sizeof(input_neurons)-1 neurons to unroll
+            for (auto i = 0; i < input_neurons.size() - 1; i++)
+            {
+                if (i == 0)
+                {
+                    usnn.emplace_back(cur_unrolling_neuron_id);
+
+                    // the first unrolling neuron takes the first two input neurons as inputs
+                    usnn[input_neurons[0]].get_output_list().push_back(cur_unrolling_neuron_id);
+                    usnn[input_neurons[1]].get_output_list().push_back(cur_unrolling_neuron_id);
+
+                    usnn[cur_unrolling_neuron_id].get_input_list().push_back(input_neurons[0]);
+                    usnn[cur_unrolling_neuron_id].get_input_list().push_back(input_neurons[1]);
+
+                    cur_unrolling_neuron_id++;
+
+                }
+                // The last unrolling neuron
+                else if (i == (input_neurons.size() - 1 - 1))
+                {
+                    usnn[prev_unrolling_neuron_id].get_output_list().push_back(
+                        neuron.get_id());
+                    usnn[input_neurons[1 + i]].get_output_list().push_back(
+                        neuron.get_id());
+
+                    usnn[neuron.get_id()].get_input_list().push_back(
+                        prev_unrolling_neuron_id);
+                    usnn[neuron.get_id()].get_input_list().push_back(
+                        input_neurons[1 + i]);
+                }
+                // All middle unrolling neurons
+                else
+                {
+                    usnn.emplace_back(cur_unrolling_neuron_id);
+
+                    usnn[prev_unrolling_neuron_id].get_output_list().push_back(
+                        cur_unrolling_neuron_id);
+                    usnn[input_neurons[1 + i]].get_output_list().push_back(
+                        cur_unrolling_neuron_id);
+
+                    usnn[cur_unrolling_neuron_id].get_input_list().push_back(
+                        prev_unrolling_neuron_id);
+                    usnn[cur_unrolling_neuron_id].get_input_list().push_back(
+                        input_neurons[1 + i]);
+
+                    prev_unrolling_neuron_id = cur_unrolling_neuron_id;
+                    cur_unrolling_neuron_id++;
+                    
+                }
+	    }
+        }
     }
+    // for (auto &neuron : usnn) { neuron.print_connections(); } exit(0);
+}
+
+void Model::output(const std::string out_name)
+{
+    std::fstream file;
+    file.open(out_name, std::fstream::out);
+
+    for (auto &neuron : usnn)
+    {
+        file << neuron.get_id() << " ";
+
+        auto &output_neurons = neuron.get_output_list();
+        for (auto &output : output_neurons) { file << output << " "; } file << "\n";
+    }
+
+    file.close();
+    return;
 }
 
 // First of all, you don't want to return back a large vector
@@ -458,6 +535,7 @@ int main(int argc, char **argv)
     Model model;
     model.readConnections(argv[1]);
     model.unroll(2);
+    model.output("unrolled_out.txt");
 
     return 0;
 }

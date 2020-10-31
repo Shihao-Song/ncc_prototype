@@ -97,6 +97,7 @@ class Model
     void readConnections(const std::string);
     void unroll(unsigned);
 
+    void output(const std::string out_name);
   // TODO, Some helper functions
   // protected:
 };
