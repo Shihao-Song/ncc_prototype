@@ -1,18 +1,17 @@
-#include <iostream>
 #include <fstream>
 #include <string>
 #include <boost/tokenizer.hpp>
-#include <algorithm>
-#include <vector>
+
 #include "unroll.h"
 
-/* extract_max_neuron_id accepts an the connection file name and obtains the max neuron id */
-int extract_max_neuron_id(const std::string file_name)
+namespace Unrolling
+{
+UINT64 Model::extractMaxNeuronId(const std::string file_name)
 {
     std::fstream file;
     file.open(file_name, std::ios::in);
 
-    int max_id = -1;
+    UINT64 max_id = 0;
     std::string line;
     typedef boost::tokenizer<boost::char_separator<char>> tok_t;
     boost::char_separator<char> sep(" ", "", boost::keep_empty_tokens);
@@ -25,7 +24,7 @@ int extract_max_neuron_id(const std::string file_name)
             {
                 continue;
             }
-            int nid = std::stoi(*i);
+            UINT64 nid = std::stoull(*i);
             if (nid > max_id)
             {
                 max_id = nid;
@@ -36,348 +35,11 @@ int extract_max_neuron_id(const std::string file_name)
     return max_id;
 }
 
-/* read_spike_info reads the spike file data and returns a data structure containing 
-information about the spikes */
-std::vector<Spike> read_spike_info(const std::string spike_file_name)
-{
-    std::fstream file;
-    file.open(spike_file_name, std::ios::in);
-
-    std::string line;
-    typedef boost::tokenizer<boost::char_separator<char>> tok_t;
-    boost::char_separator<char> sep(" ", "", boost::keep_empty_tokens);
-
-    std::vector<Spike> spikes;
-    while (std::getline(file, line))
-    {
-        int source_neuron;
-        tok_t tok(line, sep);
-        bool source = true;
-        std::vector<int> spike_times;
-        for (tok_t::iterator i = tok.begin(); i != tok.end(); ++i)
-        {
-            if (*i == "")
-            {
-                continue;
-            }
-            /* the first element of each line is the sourc neuron */
-            if (source)
-            {
-                source_neuron = std::stoi(*i);
-                source = false;
-                continue;
-            }
-
-            spike_times.push_back(std::stoi(*i));
-        }
-        Spike new_spike = Spike(source_neuron);
-        new_spike.add_spike_times(spike_times);
-        spikes.push_back(new_spike);
-    }
-
-    file.close();
-    return spikes;
-}
-
-/* read_connection_info reads in the connection_file and returns a data structure containing 
-information about the neurons */
-std::vector<Neuron> read_connection_info(const std::string connection_file_name, const std::string spike_file_name)
-{
-    int max_neuron_id = extract_max_neuron_id(connection_file_name);
-    std::vector<Neuron> snn;
-    int i;
-    for (i = 0; i < max_neuron_id + 1; i++)
-    {
-        Neuron new_neuron = Neuron(i);
-        snn.push_back(new_neuron);
-    }
-    std::vector<Spike> spikes = read_spike_info(spike_file_name);
-    unsigned long j;
-    for (j = 0; j < spikes.size(); j++)
-    {
-        snn[spikes[j].get_source_id()].add_spike(spikes[j]);
-    }
-
-    std::fstream file;
-    file.open(connection_file_name, std::ios::in);
-
-    std::string line;
-    typedef boost::tokenizer<boost::char_separator<char>> tok_t;
-    boost::char_separator<char> sep(" ", "", boost::keep_empty_tokens);
-
-    int lcount = 0;
-    while (std::getline(file, line))
-    {
-        int source_neuron;
-        tok_t tok(line, sep);
-        std::vector<int> edgeList;
-        bool first = true;
-        for (tok_t::iterator i = tok.begin(); i != tok.end(); ++i)
-        {
-            if (*i == "")
-            {
-                continue;
-            }
-            if (first)
-            {
-                source_neuron = std::stoi(*i);
-		first = false;
-                continue;
-            }
-
-            int edge = std::stoi(*i);
-            edgeList.push_back(edge);
-        }
-
-        unsigned long j;
-        for (j = 0; j < edgeList.size(); j++)
-        {
-            snn[source_neuron].add_output(edgeList[j]);
-            snn[edgeList[j]].add_input(source_neuron);
-        }
-        lcount++;
-    }
-    file.close();
-    return snn;
-}
-
-std::vector<Neuron> unroll_neuron(Neuron n, int start_idx)
-{
-    std::vector<Neuron> unrolled_neurons;
-
-    std::vector<int> inputs = n.get_input_list();
-    std::vector<int> outputs = n.get_output_list();
-
-    unsigned long number_unrolled_neurons = inputs.size() - 1;
-
-    unsigned long i;
-    for (i = 0; i < number_unrolled_neurons; i++)
-    {
-        Neuron new_neuron = Neuron(start_idx + 1);
-        unrolled_neurons.push_back(new_neuron);
-    }
-
-    unrolled_neurons[0].add_input(inputs[0]);
-    unrolled_neurons[0].add_input(inputs[1]);
-    unrolled_neurons[0].add_output(unrolled_neurons[1].get_id());
-    unrolled_neurons[0].add_spike(n.get_spike());
-
-    for (i = number_unrolled_neurons - 2; i > 0; i--)
-    {
-        unrolled_neurons[i].add_input(inputs[i + 1]);
-        unrolled_neurons[i].add_input(unrolled_neurons[i - 1].get_id());
-        unrolled_neurons[i].add_output(unrolled_neurons[i + 1].get_id());
-        unrolled_neurons[i].add_spike(n.get_spike());
-        unrolled_neurons[i].add_parent(unrolled_neurons[i - 1].get_id());
-    }
-
-    unrolled_neurons[number_unrolled_neurons - 1].add_input(inputs[number_unrolled_neurons]);
-    unrolled_neurons[number_unrolled_neurons - 1].add_input(unrolled_neurons[number_unrolled_neurons - 2].get_id());
-
-    unsigned long a;
-    for (a = 0; a < outputs.size(); a++)
-    {
-        unrolled_neurons[number_unrolled_neurons - 1].add_output(a);
-    }
-    unrolled_neurons[number_unrolled_neurons - 1].add_spike(n.get_spike());
-
-    return unrolled_neurons;
-}
-
-std::vector<int> argsort(std::vector<int> data)
-{
-    std::vector<int> index(data.size(), 0);
-    for (unsigned long i = 0; i != index.size(); i++)
-    {
-        index[i] = i;
-    }
-    auto comparator = [&data](int a, int b) { return data[a] < data[b]; };
-    std::sort(index.begin(), index.end(), comparator);
-    return index;
-}
-
-void unroll_snn(std::vector<Neuron> snn)
-{
-    std::vector<Neuron> usnn;
-    unsigned long i;
-    std::vector<int> fanins;
-
-    for (i = 0; i < snn.size(); i++)
-    {
-        std::vector<int> n = snn[i].get_input_list();
-        unsigned long j;
-        for (j = 0; j < n.size(); j++)
-        {
-            fanins.push_back(n[j]);
-        }
-    }
-
-    std::reverse(fanins.begin(), fanins.end());
-    std::vector<int> sorted_neuron_id = argsort(fanins);
-
-    std::vector<Neuron> unrolled_neurons;
-    int next_neuron_id = snn.size();
-    for (i = 0; i < sorted_neuron_id.size(); i++)
-    {
-        int idx = sorted_neuron_id[i];
-        Neuron n = snn[idx];
-        std::vector<int> fanin = n.get_input_list();
-        std::vector<int> fanout = n.get_output_list();
-
-        if (fanin.size() > 2 && fanout.size() > 0)
-        {
-            std::vector<Neuron> more = unroll_neuron(n, next_neuron_id);
-            unrolled_neurons.insert(unrolled_neurons.end(), more.begin(), more.end());
-
-            unrolled_neurons[unrolled_neurons.size() - 1].set_id(n.get_id());
-            snn[idx] = unrolled_neurons[unrolled_neurons.size() - 1];
-            unrolled_neurons.pop_back();
-
-            next_neuron_id = snn.size() + unrolled_neurons.size();
-        }
-    }
-    usnn.reserve(snn.size() + unrolled_neurons.size());
-    usnn.insert(usnn.end(), snn.begin(), snn.end());
-    usnn.insert(usnn.end(), unrolled_neurons.begin(), unrolled_neurons.end());
-    return;
-}
-
-std::vector<Neuron> unroll_generic(std::vector<Neuron> snn, unsigned long max_fanin)
-{
-    std::vector<int> neuron_ids;
-    unsigned long i;
-
-    for (i = 0; i < snn.size(); i++)
-    {
-        neuron_ids.push_back(snn[i].get_id());
-    }
-
-    int max_neuron_id = *std::max_element(neuron_ids.begin(), neuron_ids.end());
-
-    std::vector<Neuron> usnn;
-
-    unsigned long cnt = snn.size();
-    for (i = 0; i < snn.size(); i++)
-    {
-        Neuron n = snn[i];
-        std::vector<int> fanins = n.get_input_list();
-        if (fanins.size() <= max_fanin)
-        {
-            usnn.push_back(n);
-        }
-        else
-        {
-            int x = fanins.size() - 1;
-            int y = max_fanin - 1;
-
-            int number_unrolled_neurons = x / y + bool(x % y);
-            if (number_unrolled_neurons <= 1)
-            {
-                number_unrolled_neurons = 1;
-            }
-
-            int si = 0;
-            int ei = max_fanin-1;
-            int used_inputs = 0;
-            std::vector<int> input_from_previous_unit;
-            int parent = -1;
-            int j;
-            for (j = 0; j < number_unrolled_neurons - 1; j++)
-            {
-                Neuron new_neuron = Neuron(cnt);
-                std::vector<int> spike_times;
-                int nn;
-                for (nn = si; nn < ei; nn++)
-                {
-                    std::vector<int> more = snn[nn].get_spike_times();
-                    spike_times.insert(spike_times.end(), more.begin(), more.end());
-                }
-                std::unique(spike_times.begin(), spike_times.end());
-                Spike new_spike = Spike(cnt);
-                new_spike.add_spike_times(spike_times); // fix this.
-                new_neuron.add_spike(new_spike);
-
-                std::vector<int> new_fanins;
-                new_fanins.reserve(ei - si + input_from_previous_unit.size());
-                new_fanins.insert(new_fanins.end(), fanins[si], fanins[ei]);
-                new_fanins.insert(new_fanins.end(), input_from_previous_unit.begin(), input_from_previous_unit.end());
-
-                new_neuron.add_input_list(new_fanins);
-                used_inputs += ei - si;
-                si = ei;
-                ei += max_fanin - 1;
-                input_from_previous_unit.clear();
-                input_from_previous_unit.push_back(cnt);
-                new_neuron.add_output(cnt + 1);
-                new_neuron.add_parent(parent);
-                parent = cnt;
-                usnn.push_back(new_neuron);
-                cnt++;
-            }
-
-            if (fanins.size() - used_inputs + 1 <= max_fanin)
-            {
-                Neuron new_neuron = Neuron(n.get_id());
-                std::vector<int> new_fanins;
-                new_fanins.reserve(ei - si + input_from_previous_unit.size());
-		new_fanins.insert(new_fanins.end(), fanins[si], fanins[ei]);
-                new_fanins.insert(new_fanins.end(), input_from_previous_unit.begin(), input_from_previous_unit.end());
-                used_inputs += ei - si;
-                new_neuron.add_input_list(new_fanins);
-                new_neuron.add_output_list(n.get_output_list());
-                new_neuron.add_parent(parent);
-                parent = -1;
-
-                Spike new_spike = Spike(n.get_id());
-                new_spike.add_spike_times(n.get_spike_times());
-                new_neuron.add_spike(new_spike);
-                usnn.push_back(new_neuron);
-            }
-        }
-    }
-
-    return usnn;
-}
-
-void write_usnn(std::vector<Neuron> usnn, const std::string out_name)
-{
-    std::fstream file;
-    file.open(out_name, std::fstream::out);
-
-    unsigned long i;
-    for (i = 0; i < usnn.size(); i++)
-    {
-        Neuron tmp = usnn[i];
-        file << tmp.get_id();
-        file << " ";
-
-        unsigned long j;
-        std::vector<int> out_list = tmp.get_output_list();
-        for (j = 0; j < out_list.size(); j++)
-        {
-            if (j == out_list.size() - 1)
-            {
-                file << out_list[j];
-                file << "\n";
-                continue;
-            }
-            file << out_list[j];
-            file << " ";
-        }
-
-        // write the neuron's id as the first item in the line
-        // then write the neuron's output
-    }
-    file.close();
-    return;
-}
-
 // Edits
 // Basically a copy from Jacob's codes
 void Model::readConnections(const std::string connection_file_name)
 {
-    // TODO, put this function to the helper function section of Model
-    int max_neuron_id = extract_max_neuron_id(connection_file_name);
+    int max_neuron_id = extractMaxNeuronId(connection_file_name);
     // std::cout << "Max neuron ID: " << max_neuron_id << "\n";
 
     // Initialize neurons with IDs 
@@ -386,7 +48,7 @@ void Model::readConnections(const std::string connection_file_name)
         snn.emplace_back(i);
     }
 
-    // TODO, consider weights information later
+    // TODO, consider weights/spikes in the future
 
     // Parse the connection information
     std::fstream file;
@@ -396,12 +58,11 @@ void Model::readConnections(const std::string connection_file_name)
     typedef boost::tokenizer<boost::char_separator<char>> tok_t;
     boost::char_separator<char> sep(" ", "", boost::keep_empty_tokens);
 
-    int lcount = 0;
     while (std::getline(file, line))
     {
-        int source_neuron;
+        UINT64 source_neuron;
         tok_t tok(line, sep);
-        std::vector<int> edgeList;
+        std::vector<UINT64> out_neuron_list;
         bool first = true;
         for (tok_t::iterator i = tok.begin(); i != tok.end(); ++i)
         {
@@ -411,22 +72,20 @@ void Model::readConnections(const std::string connection_file_name)
             }
             if (first)
             {
-                source_neuron = std::stoi(*i);
+                source_neuron = std::stoull(*i);
                 first = false;
                 continue;
             }
 
-            int edge = std::stoi(*i);
-            edgeList.push_back(edge);
+            UINT64 out_neuron = std::stoull(*i);
+            out_neuron_list.push_back(out_neuron);
         }
 
-        unsigned long j;
-        for (j = 0; j < edgeList.size(); j++)
+        for (auto i = 0; i < out_neuron_list.size(); i++)
         {
-            snn[source_neuron].add_output(edgeList[j]);
-            snn[edgeList[j]].add_input(source_neuron);
+            snn[source_neuron].addOutputNeuron(out_neuron_list[i]);
+            snn[out_neuron_list[i]].addInputNeuron(source_neuron);
         }
-        lcount++;
     }
     file.close();
 }
@@ -449,11 +108,11 @@ void Model::unroll(unsigned max_fanin)
         unsigned prev_unrolling_neuron_id = usnn.size();
         unsigned cur_unrolling_neuron_id = usnn.size();
 
-        auto &input_neurons = neuron.get_input_list();
+        auto &input_neurons = neuron.getInputNeuronList();
         // Check if the number of inputs exceed max_fanin
         if (input_neurons.size() > max_fanin)
         {
-            // std::cout << neuron.get_id() << "\n";
+            // std::cout << neuron.getNeuronId() << "\n";
 
             // We need total sizeof(input_neurons)-1 neurons to unroll
             for (auto i = 0; i < input_neurons.size() - 1; i++)
@@ -463,11 +122,11 @@ void Model::unroll(unsigned max_fanin)
                     usnn.emplace_back(cur_unrolling_neuron_id);
 
                     // the first unrolling neuron takes the first two input neurons as inputs
-                    usnn[input_neurons[0]].get_output_list().push_back(cur_unrolling_neuron_id);
-                    usnn[input_neurons[1]].get_output_list().push_back(cur_unrolling_neuron_id);
+                    usnn[input_neurons[0]].getOutputNeuronList().push_back(cur_unrolling_neuron_id);
+                    usnn[input_neurons[1]].getOutputNeuronList().push_back(cur_unrolling_neuron_id);
 
-                    usnn[cur_unrolling_neuron_id].get_input_list().push_back(input_neurons[0]);
-                    usnn[cur_unrolling_neuron_id].get_input_list().push_back(input_neurons[1]);
+                    usnn[cur_unrolling_neuron_id].getInputNeuronList().push_back(input_neurons[0]);
+                    usnn[cur_unrolling_neuron_id].getInputNeuronList().push_back(input_neurons[1]);
 
                     cur_unrolling_neuron_id++;
 
@@ -475,14 +134,14 @@ void Model::unroll(unsigned max_fanin)
                 // The last unrolling neuron
                 else if (i == (input_neurons.size() - 1 - 1))
                 {
-                    usnn[prev_unrolling_neuron_id].get_output_list().push_back(
-                        neuron.get_id());
-                    usnn[input_neurons[1 + i]].get_output_list().push_back(
-                        neuron.get_id());
+                    usnn[prev_unrolling_neuron_id].getOutputNeuronList().push_back(
+                        neuron.getNeuronId());
+                    usnn[input_neurons[1 + i]].getOutputNeuronList().push_back(
+                        neuron.getNeuronId());
 
-                    usnn[neuron.get_id()].get_input_list().push_back(
+                    usnn[neuron.getNeuronId()].getInputNeuronList().push_back(
                         prev_unrolling_neuron_id);
-                    usnn[neuron.get_id()].get_input_list().push_back(
+                    usnn[neuron.getNeuronId()].getInputNeuronList().push_back(
                         input_neurons[1 + i]);
                 }
                 // All middle unrolling neurons
@@ -490,14 +149,14 @@ void Model::unroll(unsigned max_fanin)
                 {
                     usnn.emplace_back(cur_unrolling_neuron_id);
 
-                    usnn[prev_unrolling_neuron_id].get_output_list().push_back(
+                    usnn[prev_unrolling_neuron_id].getOutputNeuronList().push_back(
                         cur_unrolling_neuron_id);
-                    usnn[input_neurons[1 + i]].get_output_list().push_back(
+                    usnn[input_neurons[1 + i]].getOutputNeuronList().push_back(
                         cur_unrolling_neuron_id);
 
-                    usnn[cur_unrolling_neuron_id].get_input_list().push_back(
+                    usnn[cur_unrolling_neuron_id].getInputNeuronList().push_back(
                         prev_unrolling_neuron_id);
-                    usnn[cur_unrolling_neuron_id].get_input_list().push_back(
+                    usnn[cur_unrolling_neuron_id].getInputNeuronList().push_back(
                         input_neurons[1 + i]);
 
                     prev_unrolling_neuron_id = cur_unrolling_neuron_id;
@@ -517,14 +176,15 @@ void Model::output(const std::string out_name)
 
     for (auto &neuron : usnn)
     {
-        file << neuron.get_id() << " ";
+        file << neuron.getNeuronId() << " ";
 
-        auto &output_neurons = neuron.get_output_list();
+        auto &output_neurons = neuron.getOutputNeuronList();
         for (auto &output : output_neurons) { file << output << " "; } file << "\n";
     }
 
     file.close();
     return;
+}
 }
 
 // First of all, you don't want to return back a large vector
@@ -532,7 +192,7 @@ void Model::output(const std::string out_name)
 // A better alternative way is to put those rolled/unrolled SNNs into another class.
 int main(int argc, char **argv)
 {
-    Model model;
+    Unrolling::Model model;
     model.readConnections(argv[1]);
     model.unroll(2);
     model.output("unrolled_out.txt");
