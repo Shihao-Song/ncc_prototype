@@ -18,7 +18,10 @@ class Neuron
   public:
     Neuron() {}
     Neuron(UINT64 _id) : neuron_id(_id) {}
- 
+    Neuron(const Neuron &_copy) : neuron_id(_copy.neuron_id),
+                                  input_neurons(_copy.input_neurons),
+                                  output_neurons(_copy.output_neurons) {}
+
     void addInputNeuron(UINT64 _in_neuron)
     {
         input_neurons.push_back(_in_neuron);

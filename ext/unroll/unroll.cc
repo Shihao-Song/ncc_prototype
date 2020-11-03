@@ -6,6 +6,12 @@
 
 namespace Unrolling
 {
+/*
+Neuron::Neuron(Neuron &_copy) : neuron_id(_copy.neuron_id),
+                                input_neurons(_copy.input_neurons),
+                                output_neurons(_copy.output_neurons) {}
+*/
+
 UINT64 Model::extractMaxNeuronId(const std::string file_name)
 {
     std::fstream file;
@@ -90,11 +96,10 @@ void Model::readConnections(const std::string connection_file_name)
     file.close();
 }
 
+// TODO, upload an example picture to explain the codes
 // A simple proof-of-concept version of unroll
 void Model::unroll(unsigned max_fanin)
 {
-    // for (auto &neuron : snn) { neuron.print_connections(); }
-
     // Initialize the unrolled neurons
     for (auto i = 0; i < snn.size(); i++)
     {
@@ -105,8 +110,8 @@ void Model::unroll(unsigned max_fanin)
     // Look for all the neurons that have more than max_fanin number of inputs
     for (auto &neuron : snn)
     {
-        unsigned prev_unrolling_neuron_id = usnn.size();
-        unsigned cur_unrolling_neuron_id = usnn.size();
+        UINT64 prev_unrolling_neuron_id = usnn.size();
+        UINT64 cur_unrolling_neuron_id = usnn.size();
 
         auto &input_neurons = neuron.getInputNeuronList();
         // Check if the number of inputs exceed max_fanin
@@ -114,7 +119,7 @@ void Model::unroll(unsigned max_fanin)
         {
             // std::cout << neuron.getNeuronId() << "\n";
 
-            // We need total sizeof(input_neurons)-1 neurons to unroll
+            // We need total sizeof(input_neurons)-1 neurons to unroll (the current neuron)
             for (auto i = 0; i < input_neurons.size() - 1; i++)
             {
                 if (i == 0)
@@ -166,6 +171,10 @@ void Model::unroll(unsigned max_fanin)
 	    }
         }
     }
+
+    // Check for the disconnected neurons
+     
+
     // for (auto &neuron : usnn) { neuron.print_connections(); } exit(0);
 }
 
