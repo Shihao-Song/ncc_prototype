@@ -69,14 +69,56 @@ class Model
 
   public:
     Model() {}
-    void readConnections(const std::string);
+    void readConnections(const std::string&);
     void unroll(unsigned);
 
-    void output(const std::string out_name);
+    void output(const std::string&);
+
+    void debugOutput(const std::string &out_name)
+    {
+        std::fstream file;
+        file.open(out_name, std::fstream::out);
+
+        for (auto &neuron : usnn)
+        {
+            file << "Neuron ID: " << neuron.getNeuronId() << "\n";
+
+            auto &input_neurons = neuron.getInputNeuronList();
+            auto &output_neurons = neuron.getOutputNeuronList();
+
+            file << "Input Neuron IDs: ";
+            for (auto &input : input_neurons) { file << input << " "; } file << "\n";
+            file << "Output Neuron IDs: ";
+            for (auto &output : output_neurons) { file << output << " "; } file << "\n";
+            file << "\n";
+        }
+
+        file.close();
+        return;
+    }
 
   protected:
-    UINT64 extractMaxNeuronId(const std::string file_name);    
+    UINT64 extractMaxNeuronId(const std::string&);    
 };
+
+class Argument
+{
+  protected:
+    std::string connection_file = "N/A";
+    std::string unrolled_output = "N/A";
+    std::string debug_output = "N/A";
+
+    unsigned fanin = 0;
+
+  public:
+    Argument(int argc, char **argv);
+
+    auto getFanin() { return fanin; }
+    auto &getConnFile() { return connection_file; }
+    auto &getOutputFile() { return unrolled_output; }
+    auto &getDebugOutputFile() { return debug_output; }
+};
+
 }
 
 #endif

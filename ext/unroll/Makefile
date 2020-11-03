@@ -1,5 +1,6 @@
 build:
-	g++ -std=c++11 -Wall -Wextra -ggdb3 -o unroll unroll.cc -lboost_system -lboost_filesystem -lm
+	g++ -std=c++17 -o unroll unroll.cc -lboost_program_options
 
 clean:
 	rm -f unroll
+	rm -f out/*
