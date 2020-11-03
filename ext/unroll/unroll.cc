@@ -95,6 +95,8 @@ void Model::readConnections(const std::string connection_file_name)
 // A simple proof-of-concept version of unroll
 void Model::unroll(unsigned max_fanin)
 {
+    assert(max_fanin == 2);
+
     // Initialize the unrolled neurons
     for (auto i = 0; i < snn.size(); i++)
     {
