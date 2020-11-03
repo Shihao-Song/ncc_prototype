@@ -190,7 +190,7 @@ void Model::unroll(unsigned max_fanin)
     // Check for the disconnected neurons
      
 
-    for (auto &neuron : usnn) { neuron.print_connections(); } exit(0);
+    // for (auto &neuron : usnn) { neuron.print_connections(); } exit(0);
 }
 
 void Model::output(const std::string out_name)
