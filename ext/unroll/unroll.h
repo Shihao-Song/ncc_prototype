@@ -46,6 +46,10 @@ class Neuron
     std::vector<UINT64> &getInputNeuronList() { return input_neurons; };
     std::vector<UINT64> &getOutputNeuronList() { return output_neurons; };
 
+    std::vector<UINT64> getInputNeuronListCopy() { return input_neurons; };
+    std::vector<UINT64> getOutputNeuronListCopy() { return output_neurons; };
+
+
     void print_connections()
     {
         std::cout << "Neuron ID: " << neuron_id << "\n";

@@ -1,17 +1,12 @@
+#include <algorithm>
+#include <boost/tokenizer.hpp>
 #include <fstream>
 #include <string>
-#include <boost/tokenizer.hpp>
 
 #include "unroll.h"
 
 namespace Unrolling
 {
-/*
-Neuron::Neuron(Neuron &_copy) : neuron_id(_copy.neuron_id),
-                                input_neurons(_copy.input_neurons),
-                                output_neurons(_copy.output_neurons) {}
-*/
-
 UINT64 Model::extractMaxNeuronId(const std::string file_name)
 {
     std::fstream file;
@@ -104,50 +99,70 @@ void Model::unroll(unsigned max_fanin)
     for (auto i = 0; i < snn.size(); i++)
     {
         // emplace_back should be more space-efficient than push_back
-        usnn.emplace_back(i);
+        usnn.emplace_back(snn[i]);
     }
 
+    // for (auto &neuron : usnn) { neuron.print_connections(); }
+ 
     // Look for all the neurons that have more than max_fanin number of inputs
-    for (auto &neuron : snn)
+    for (auto idx = 0; idx < snn.size(); idx++)
     {
+        auto &neuron = usnn[idx];
+
         UINT64 prev_unrolling_neuron_id = usnn.size();
         UINT64 cur_unrolling_neuron_id = usnn.size();
 
-        auto &input_neurons = neuron.getInputNeuronList();
-        // Check if the number of inputs exceed max_fanin
-        if (input_neurons.size() > max_fanin)
-        {
-            // std::cout << neuron.getNeuronId() << "\n";
+        auto input_neurons_copy = neuron.getInputNeuronListCopy();
 
+        // Check if the number of inputs exceed max_fanin
+        if (input_neurons_copy.size() > max_fanin)
+        {
+            // Step one, reset the output neuron of all the input neurons
+            for (auto &input_neuron : input_neurons_copy)
+            {
+                auto &out = usnn[input_neuron].getOutputNeuronList();
+                out.erase(std::remove(out.begin(), out.end(), neuron.getNeuronId()));
+            }
+
+            // Step two, reset the input neurons of the currently processing neuron
+            neuron.getInputNeuronList().clear();
+            neuron.getInputNeuronList().shrink_to_fit();
+
+            // for (auto &neuron : usnn) { neuron.print_connections(); } exit(0);
+            // Step three, unrolling
             // We need total sizeof(input_neurons)-1 neurons to unroll (the current neuron)
-            for (auto i = 0; i < input_neurons.size() - 1; i++)
+            for (auto i = 0; i < input_neurons_copy.size() - 1; i++)
             {
                 if (i == 0)
                 {
                     usnn.emplace_back(cur_unrolling_neuron_id);
 
                     // the first unrolling neuron takes the first two input neurons as inputs
-                    usnn[input_neurons[0]].getOutputNeuronList().push_back(cur_unrolling_neuron_id);
-                    usnn[input_neurons[1]].getOutputNeuronList().push_back(cur_unrolling_neuron_id);
+                    usnn[input_neurons_copy[0]].getOutputNeuronList().push_back(
+                        cur_unrolling_neuron_id);
+                    usnn[input_neurons_copy[1]].getOutputNeuronList().push_back(
+                        cur_unrolling_neuron_id);
 
-                    usnn[cur_unrolling_neuron_id].getInputNeuronList().push_back(input_neurons[0]);
-                    usnn[cur_unrolling_neuron_id].getInputNeuronList().push_back(input_neurons[1]);
+                    usnn[cur_unrolling_neuron_id].getInputNeuronList().push_back(
+                        input_neurons_copy[0]);
+                    usnn[cur_unrolling_neuron_id].getInputNeuronList().push_back(
+                        input_neurons_copy[1]);
 
                     cur_unrolling_neuron_id++;
 
                 }
                 // The last unrolling neuron
-                else if (i == (input_neurons.size() - 1 - 1))
+                else if (i == (input_neurons_copy.size() - 1 - 1))
                 {
                     usnn[prev_unrolling_neuron_id].getOutputNeuronList().push_back(
                         neuron.getNeuronId());
-                    usnn[input_neurons[1 + i]].getOutputNeuronList().push_back(
+                    usnn[input_neurons_copy[1 + i]].getOutputNeuronList().push_back(
                         neuron.getNeuronId());
 
                     usnn[neuron.getNeuronId()].getInputNeuronList().push_back(
                         prev_unrolling_neuron_id);
                     usnn[neuron.getNeuronId()].getInputNeuronList().push_back(
-                        input_neurons[1 + i]);
+                        input_neurons_copy[1 + i]);
                 }
                 // All middle unrolling neurons
                 else
@@ -156,13 +171,13 @@ void Model::unroll(unsigned max_fanin)
 
                     usnn[prev_unrolling_neuron_id].getOutputNeuronList().push_back(
                         cur_unrolling_neuron_id);
-                    usnn[input_neurons[1 + i]].getOutputNeuronList().push_back(
+                    usnn[input_neurons_copy[1 + i]].getOutputNeuronList().push_back(
                         cur_unrolling_neuron_id);
 
                     usnn[cur_unrolling_neuron_id].getInputNeuronList().push_back(
                         prev_unrolling_neuron_id);
                     usnn[cur_unrolling_neuron_id].getInputNeuronList().push_back(
-                        input_neurons[1 + i]);
+                        input_neurons_copy[1 + i]);
 
                     prev_unrolling_neuron_id = cur_unrolling_neuron_id;
                     cur_unrolling_neuron_id++;
@@ -175,7 +190,7 @@ void Model::unroll(unsigned max_fanin)
     // Check for the disconnected neurons
      
 
-    // for (auto &neuron : usnn) { neuron.print_connections(); } exit(0);
+    for (auto &neuron : usnn) { neuron.print_connections(); } exit(0);
 }
 
 void Model::output(const std::string out_name)
