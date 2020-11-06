@@ -15,12 +15,15 @@ class Neuron
     std::vector<UINT64> input_neurons;
     std::vector<UINT64> output_neurons;
 
+    std::vector<UINT64> spike_times;
+
   public:
     Neuron() {}
     Neuron(UINT64 _id) : neuron_id(_id) {}
     Neuron(const Neuron &_copy) : neuron_id(_copy.neuron_id),
                                   input_neurons(_copy.input_neurons),
-                                  output_neurons(_copy.output_neurons) {}
+                                  output_neurons(_copy.output_neurons),
+                                  spike_times(_copy.spike_times) {}
 
     void addInputNeuron(UINT64 _in_neuron)
     {
@@ -40,11 +43,19 @@ class Neuron
         output_neurons = _list;
     }
 
+    void addSpikeTimeList(std::vector<UINT64> &_list)
+    {
+        spike_times = _list;
+    }
+
     void setNeuronId(UINT64 _id) { neuron_id = _id; }
     int getNeuronId() { return neuron_id; };
 
     std::vector<UINT64> &getInputNeuronList() { return input_neurons; };
     std::vector<UINT64> &getOutputNeuronList() { return output_neurons; };
+
+    std::vector<UINT64> &getSpikeTimes() { return spike_times; }
+    unsigned numOfSpikes() { return spike_times.size(); }
 
     std::vector<UINT64> getInputNeuronListCopy() { return input_neurons; };
     std::vector<UINT64> getOutputNeuronListCopy() { return output_neurons; };
@@ -70,8 +81,7 @@ class Model
     unsigned max_fanin;
 
   public:
-    Model() {}
-    void readConnections(const std::string&);
+    Model(const std::string&, const std::string&);
 
     void setFanin(unsigned _fanin) { max_fanin = _fanin; }
     void unroll();
@@ -103,12 +113,15 @@ class Model
 
   protected:
     UINT64 extractMaxNeuronId(const std::string&);    
+    void readConnections(const std::string&);
+    void readSpikes(const std::string&);
 };
 
 class Argument
 {
   protected:
     std::string connection_file = "N/A";
+    std::string spike_file = "N/A";
     std::string unrolled_output = "N/A";
     std::string debug_output = "N/A";
 
@@ -119,6 +132,7 @@ class Argument
 
     auto getFanin() { return fanin; }
     auto &getConnFile() { return connection_file; }
+    auto &getSpikeFile() { return spike_file; }
     auto &getOutputFile() { return unrolled_output; }
     auto &getDebugOutputFile() { return debug_output; }
 };

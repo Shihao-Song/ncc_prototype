@@ -17,6 +17,8 @@ Argument::Argument(int argc, char **argv)
         ("help", "Print help messages")
         ("conn-file", po::value<std::string>(&connection_file)->required(),
                  "Connection file")
+        ("spike-file", po::value<std::string>(&spike_file)->required(),
+                 "Spike file")
         ("out-file", po::value<std::string>(&unrolled_output)->required(),
                    "Unrolled SNN output file")
         ("debug-out-file", po::value<std::string>(&debug_output),
@@ -24,7 +26,7 @@ Argument::Argument(int argc, char **argv)
         ("fanin", po::value<unsigned>(&fanin)->required(),
                    "fanin");
 
-   po::variables_map vm;
+    po::variables_map vm;
 
     try 
     { 
@@ -45,6 +47,23 @@ Argument::Argument(int argc, char **argv)
         std::cerr << desc << "\n"; 
         exit(0);
     }
+}
+
+Model::Model(const std::string& connection_file_name,
+             const std::string& spike_file)
+{
+    UINT64 max_neuron_id = extractMaxNeuronId(connection_file_name);
+    // std::cout << "Max neuron ID: " << max_neuron_id << "\n";
+
+    // Initialize neurons with IDs 
+    for (auto i = 0; i <= max_neuron_id; i++)
+    {
+        snn.emplace_back(i);
+    }
+
+    readSpikes(spike_file);
+
+    readConnections(connection_file_name);
 }
 
 UINT64 Model::extractMaxNeuronId(const std::string &file_name)
@@ -76,22 +95,46 @@ UINT64 Model::extractMaxNeuronId(const std::string &file_name)
     return max_id;
 }
 
-// Edits
-// Basically a copy from Jacob's codes
+void Model::readSpikes(const std::string& spike_file)
+{
+    std::fstream file;
+    file.open(spike_file, std::ios::in);
+
+    std::string line;
+    typedef boost::tokenizer<boost::char_separator<char>> tok_t;
+    boost::char_separator<char> sep(" ", "", boost::keep_empty_tokens);
+
+    while (std::getline(file, line))
+    {
+        UINT64 source_neuron;
+        tok_t tok(line, sep);
+        std::vector<UINT64> spike_times;
+        bool first = true;
+        for (tok_t::iterator i = tok.begin(); i != tok.end(); ++i)
+        {
+            if (*i == "")
+            {
+                continue;
+            }
+            if (first)
+            {
+                source_neuron = std::stoull(*i);
+                first = false;
+                continue;
+            }
+
+            UINT64 spike = std::stoull(*i);
+            spike_times.push_back(spike);
+        }
+
+        assert(source_neuron < snn.size());
+        snn[source_neuron].addSpikeTimeList(spike_times);
+    }
+    file.close();
+}
+
 void Model::readConnections(const std::string &connection_file_name)
 {
-    int max_neuron_id = extractMaxNeuronId(connection_file_name);
-    // std::cout << "Max neuron ID: " << max_neuron_id << "\n";
-
-    // Initialize neurons with IDs 
-    for (auto i = 0; i <= max_neuron_id; i++)
-    {
-        snn.emplace_back(i);
-    }
-
-    // TODO, consider weights/spikes in the future
-
-    // Parse the connection information
     std::fstream file;
     file.open(connection_file_name, std::ios::in);
 
@@ -244,14 +287,40 @@ void Model::output(const std::string &out_name)
 
     for (auto &neuron : usnn)
     {
+        /*
+        auto &spikes = neuron.getSpikeTimes();
+        if (spikes.size() > 0)
+        {
+            file << neuron.getNeuronId() << " ";
+            for (auto i = 0; i < spikes.size() - 1; i++)
+            {
+                file << spikes[i] << " ";
+            }
+            file << spikes[spikes.size() - 1] << "\n";
+        }
+        */
+
         assert(neuron.getInputNeuronList().size() <= max_fanin);
         auto &output_neurons = neuron.getOutputNeuronList();
         for (auto &output : output_neurons)
         { 
             file << neuron.getNeuronId() << " ";
             file << output << " ";
+            /*
+            if (neuron.getNeuronId() > snn.size())
+            {
+                file << "1";
+            }
+            else
+            {
+                assert(neuron.getSpikeTimes().size() != 0);
+                file << neuron.getSpikeTimes().size();
+            }
+            */
+            file << neuron.getSpikeTimes().size();
             file << "\n";
         }
+
         // if (output_neurons.size() == 0) { std::cout << neuron.getNeuronId() << std::endl; }
     }
 
@@ -267,8 +336,8 @@ int main(int argc, char **argv)
 {
     Unrolling::Argument args(argc, argv);
 
-    Unrolling::Model model;
-    model.readConnections(args.getConnFile());
+    Unrolling::Model model(args.getConnFile(),
+                           args.getSpikeFile());
 
     model.setFanin(args.getFanin());
     model.unroll();
