@@ -8,6 +8,8 @@ namespace Unrolling
 {
 typedef uint64_t UINT64;
 
+const UINT64 INVALID_ID = (UINT64) - 1;
+
 class Neuron
 {
   protected:
@@ -15,7 +17,9 @@ class Neuron
     std::vector<UINT64> input_neurons;
     std::vector<UINT64> output_neurons;
 
-    std::vector<UINT64> spike_times;
+    unsigned num_spikes = 0;
+
+    UINT64 parent = INVALID_ID;
 
   public:
     Neuron() {}
@@ -23,7 +27,7 @@ class Neuron
     Neuron(const Neuron &_copy) : neuron_id(_copy.neuron_id),
                                   input_neurons(_copy.input_neurons),
                                   output_neurons(_copy.output_neurons),
-                                  spike_times(_copy.spike_times) {}
+                                  num_spikes(_copy.num_spikes) {}
 
     void addInputNeuron(UINT64 _in_neuron)
     {
@@ -43,10 +47,9 @@ class Neuron
         output_neurons = _list;
     }
 
-    void addSpikeTimeList(std::vector<UINT64> &_list)
-    {
-        spike_times = _list;
-    }
+    void addNumSpikesFromOneInput(unsigned _spike) { num_spikes += _spike; }
+    void setNumSpikes(unsigned _num_spikes) { num_spikes = _num_spikes; }
+    void resetNumSpikes() { num_spikes = 0; }
 
     void setNeuronId(UINT64 _id) { neuron_id = _id; }
     int getNeuronId() { return neuron_id; };
@@ -54,12 +57,13 @@ class Neuron
     std::vector<UINT64> &getInputNeuronList() { return input_neurons; };
     std::vector<UINT64> &getOutputNeuronList() { return output_neurons; };
 
-    std::vector<UINT64> &getSpikeTimes() { return spike_times; }
-    unsigned numOfSpikes() { return spike_times.size(); }
+    unsigned numOfSpikes() { return num_spikes; }
+
+    void setParentId(UINT64 _id) { parent = _id; }
+    UINT64 getParentId() { return parent; }
 
     std::vector<UINT64> getInputNeuronListCopy() { return input_neurons; };
     std::vector<UINT64> getOutputNeuronListCopy() { return output_neurons; };
-
 
     void print_connections()
     {
@@ -111,6 +115,25 @@ class Model
         return;
     }
 
+    void parentNeuronOutput(const std::string &out_name)
+    {
+        std::fstream file;
+        file.open(out_name, std::fstream::out);
+
+        for (auto &neuron : usnn)
+        {
+            file << neuron.getNeuronId() << " ";
+
+            auto parent = neuron.getParentId(); 
+
+            if (parent == INVALID_ID) { file << "-1" << "\n"; }
+            else { file << parent << "\n"; }
+        }
+
+        file.close();
+        return;
+    }
+
   protected:
     UINT64 extractMaxNeuronId(const std::string&);    
     void readConnections(const std::string&);
@@ -123,6 +146,7 @@ class Argument
     std::string connection_file = "N/A";
     std::string spike_file = "N/A";
     std::string unrolled_output = "N/A";
+    std::string parent_neu_output = "N/A";
     std::string debug_output = "N/A";
 
     unsigned fanin = 0;
@@ -135,6 +159,7 @@ class Argument
     auto &getSpikeFile() { return spike_file; }
     auto &getOutputFile() { return unrolled_output; }
     auto &getDebugOutputFile() { return debug_output; }
+    auto &getParentNeuronOutputFile() { return parent_neu_output; }
 };
 
 }

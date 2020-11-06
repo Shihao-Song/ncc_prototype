@@ -21,6 +21,8 @@ Argument::Argument(int argc, char **argv)
                  "Spike file")
         ("out-file", po::value<std::string>(&unrolled_output)->required(),
                    "Unrolled SNN output file")
+        ("parent-neuron-out-file", po::value<std::string>(&parent_neu_output),
+                   "Parent neuron output file")
         ("debug-out-file", po::value<std::string>(&debug_output),
                    "Details of the unrolled SNN")
         ("fanin", po::value<unsigned>(&fanin)->required(),
@@ -64,6 +66,16 @@ Model::Model(const std::string& connection_file_name,
     readSpikes(spike_file);
 
     readConnections(connection_file_name);
+
+    // Initialize all the spike information
+    for (auto &neuron : snn)
+    {
+        auto &outputs = neuron.getOutputNeuronList();
+        for (auto &output : outputs) 
+        {
+            snn[output].addNumSpikesFromOneInput(neuron.numOfSpikes());
+        }
+    }
 }
 
 UINT64 Model::extractMaxNeuronId(const std::string &file_name)
@@ -128,7 +140,7 @@ void Model::readSpikes(const std::string& spike_file)
         }
 
         assert(source_neuron < snn.size());
-        snn[source_neuron].addSpikeTimeList(spike_times);
+        snn[source_neuron].setNumSpikes(spike_times.size());
     }
     file.close();
 }
@@ -183,7 +195,8 @@ void Model::unroll()
         // emplace_back should be more space-efficient than push_back
         usnn.emplace_back(snn[i]);
     }
- 
+
+    
     // Look for all the neurons that have more than max_fanin number of inputs
     for (auto idx = 0; idx < snn.size(); idx++)
     {
@@ -205,6 +218,7 @@ void Model::unroll()
             // Step two, reset the input neurons of the currently processing neuron
             usnn[idx].getInputNeuronList().clear();
             usnn[idx].getInputNeuronList().shrink_to_fit();
+            usnn[idx].resetNumSpikes();
 
             // Step three, unrolling
             // The number of intermediate neurons to unroll the current neuron
@@ -212,22 +226,28 @@ void Model::unroll()
             unsigned num_inputs = input_neurons_copy.size();
             unsigned num_inter_neurons = std::ceil(((float)num_inputs - (float)max_fanin) / 
                                                    ((float)max_fanin - 1)) + 1;
-            // std::cout << num_inter_neurons << "\n"; exit(0);
+
+            std::vector<UINT64> new_neurons;
             for (auto inter_neu_idx = 0; inter_neu_idx < num_inter_neurons; inter_neu_idx++)
             {
                 if (inter_neu_idx == 0)
                 {
                     usnn.emplace_back(cur_unrolling_neuron_id);
 
+                    unsigned total_spikes = 0;
+
                     for (auto i = 0; i < max_fanin; i++)
                     {
                         usnn[input_neurons_copy[i]].getOutputNeuronList().push_back(
                             cur_unrolling_neuron_id);
+                        total_spikes += usnn[input_neurons_copy[i]].numOfSpikes();
 
                         usnn[cur_unrolling_neuron_id].getInputNeuronList().push_back(
                             input_neurons_copy[i]);
                     }
 
+                    usnn[cur_unrolling_neuron_id].setNumSpikes(total_spikes);
+                    new_neurons.push_back(cur_unrolling_neuron_id);
                     cur_unrolling_neuron_id++;
                 }
                 else if (inter_neu_idx == num_inter_neurons - 1)
@@ -237,6 +257,8 @@ void Model::unroll()
                     usnn[usnn[idx].getNeuronId()].getInputNeuronList().push_back(
                         prev_unrolling_neuron_id);
 
+                    unsigned total_spikes = usnn[prev_unrolling_neuron_id].numOfSpikes();
+
                     for (auto i = max_fanin + (inter_neu_idx - 1) * (max_fanin - 1);
                               i < num_inputs;
                               i++)
@@ -244,9 +266,12 @@ void Model::unroll()
 
                         usnn[input_neurons_copy[i]].getOutputNeuronList().push_back(
                             usnn[idx].getNeuronId());
+                        total_spikes += usnn[input_neurons_copy[i]].numOfSpikes();
+
                         usnn[usnn[idx].getNeuronId()].getInputNeuronList().push_back(
                             input_neurons_copy[i]);
                     }
+                    usnn[usnn[idx].getNeuronId()].setNumSpikes(total_spikes);
                 }
                 else
                 {
@@ -257,6 +282,7 @@ void Model::unroll()
                     usnn[cur_unrolling_neuron_id].getInputNeuronList().push_back(
                         prev_unrolling_neuron_id);
 
+                    unsigned total_spikes = usnn[prev_unrolling_neuron_id].numOfSpikes();
                     
                     for (auto i = max_fanin + (inter_neu_idx - 1) * (max_fanin - 1); 
                               i < max_fanin + inter_neu_idx * (max_fanin - 1);
@@ -264,20 +290,27 @@ void Model::unroll()
                     {
                         usnn[input_neurons_copy[i]].getOutputNeuronList().push_back(
                             cur_unrolling_neuron_id);
+                        total_spikes += usnn[input_neurons_copy[i]].numOfSpikes();
+
                         usnn[cur_unrolling_neuron_id].getInputNeuronList().push_back(
                             input_neurons_copy[i]);
                     }
 
+                    usnn[cur_unrolling_neuron_id].setNumSpikes(total_spikes);
+
+                    new_neurons.push_back(cur_unrolling_neuron_id);
                     prev_unrolling_neuron_id = cur_unrolling_neuron_id;
                     cur_unrolling_neuron_id++;
                 }
             }
+
+            for (auto new_neuron : new_neurons)
+            {
+                usnn[new_neuron].setParentId(usnn[idx].getNeuronId()); 
+            }
         }
     }
-
-    // Check for the disconnected neurons
-     
-    // for (auto &neuron : usnn) { neuron.print_connections(); }
+    // for (auto &neuron : usnn) { neuron.print_connections(); } exit(0);
 }
 
 void Model::output(const std::string &out_name)
@@ -287,37 +320,13 @@ void Model::output(const std::string &out_name)
 
     for (auto &neuron : usnn)
     {
-        /*
-        auto &spikes = neuron.getSpikeTimes();
-        if (spikes.size() > 0)
-        {
-            file << neuron.getNeuronId() << " ";
-            for (auto i = 0; i < spikes.size() - 1; i++)
-            {
-                file << spikes[i] << " ";
-            }
-            file << spikes[spikes.size() - 1] << "\n";
-        }
-        */
-
         assert(neuron.getInputNeuronList().size() <= max_fanin);
         auto &output_neurons = neuron.getOutputNeuronList();
         for (auto &output : output_neurons)
         { 
             file << neuron.getNeuronId() << " ";
             file << output << " ";
-            /*
-            if (neuron.getNeuronId() > snn.size())
-            {
-                file << "1";
-            }
-            else
-            {
-                assert(neuron.getSpikeTimes().size() != 0);
-                file << neuron.getSpikeTimes().size();
-            }
-            */
-            file << neuron.getSpikeTimes().size();
+            file << neuron.numOfSpikes();
             file << "\n";
         }
 
@@ -342,6 +351,12 @@ int main(int argc, char **argv)
     model.setFanin(args.getFanin());
     model.unroll();
     model.output(args.getOutputFile());
+
+    if (auto &parent_neu_out = args.getParentNeuronOutputFile();
+        parent_neu_out != "N/A")
+    {
+        model.parentNeuronOutput(parent_neu_out);
+    }
 
     if (auto &debug_out = args.getDebugOutputFile();
         debug_out != "N/A")
