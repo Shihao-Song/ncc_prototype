@@ -132,7 +132,7 @@ void Model::readConnections(const std::string &connection_file_name)
 }
 
 // A simple proof-of-concept version of unroll
-void Model::unroll(unsigned max_fanin)
+void Model::unroll()
 {
     // Initialize the unrolled neurons
     for (auto i = 0; i < snn.size(); i++)
@@ -144,12 +144,10 @@ void Model::unroll(unsigned max_fanin)
     // Look for all the neurons that have more than max_fanin number of inputs
     for (auto idx = 0; idx < snn.size(); idx++)
     {
-        auto &neuron = usnn[idx];
-
         UINT64 prev_unrolling_neuron_id = usnn.size();
         UINT64 cur_unrolling_neuron_id = usnn.size();
 
-        auto input_neurons_copy = neuron.getInputNeuronListCopy();
+        auto input_neurons_copy = usnn[idx].getInputNeuronListCopy();
 
         // Check if the number of inputs exceed max_fanin
         if (input_neurons_copy.size() > max_fanin)
@@ -158,12 +156,12 @@ void Model::unroll(unsigned max_fanin)
             for (auto &input_neuron : input_neurons_copy)
             {
                 auto &out = usnn[input_neuron].getOutputNeuronList();
-                out.erase(std::remove(out.begin(), out.end(), neuron.getNeuronId()));
+                out.erase(std::remove(out.begin(), out.end(), usnn[idx].getNeuronId()));
             }
 
             // Step two, reset the input neurons of the currently processing neuron
-            neuron.getInputNeuronList().clear();
-            neuron.getInputNeuronList().shrink_to_fit();
+            usnn[idx].getInputNeuronList().clear();
+            usnn[idx].getInputNeuronList().shrink_to_fit();
 
             // Step three, unrolling
             // The number of intermediate neurons to unroll the current neuron
@@ -192,8 +190,8 @@ void Model::unroll(unsigned max_fanin)
                 else if (inter_neu_idx == num_inter_neurons - 1)
                 {
                     usnn[prev_unrolling_neuron_id].getOutputNeuronList().push_back(
-                        neuron.getNeuronId());
-                    usnn[neuron.getNeuronId()].getInputNeuronList().push_back(
+                        usnn[idx].getNeuronId());
+                    usnn[usnn[idx].getNeuronId()].getInputNeuronList().push_back(
                         prev_unrolling_neuron_id);
 
                     for (auto i = max_fanin + (inter_neu_idx - 1) * (max_fanin - 1);
@@ -202,8 +200,8 @@ void Model::unroll(unsigned max_fanin)
                     {
 
                         usnn[input_neurons_copy[i]].getOutputNeuronList().push_back(
-                            neuron.getNeuronId());
-                        usnn[neuron.getNeuronId()].getInputNeuronList().push_back(
+                            usnn[idx].getNeuronId());
+                        usnn[usnn[idx].getNeuronId()].getInputNeuronList().push_back(
                             input_neurons_copy[i]);
                     }
                 }
@@ -236,7 +234,7 @@ void Model::unroll(unsigned max_fanin)
 
     // Check for the disconnected neurons
      
-    // for (auto &neuron : usnn) { neuron.print_connections(); } exit(0);
+    // for (auto &neuron : usnn) { neuron.print_connections(); }
 }
 
 void Model::output(const std::string &out_name)
@@ -246,10 +244,15 @@ void Model::output(const std::string &out_name)
 
     for (auto &neuron : usnn)
     {
-        file << neuron.getNeuronId() << " ";
-
+        assert(neuron.getInputNeuronList().size() <= max_fanin);
         auto &output_neurons = neuron.getOutputNeuronList();
-        for (auto &output : output_neurons) { file << output << " "; } file << "\n";
+        for (auto &output : output_neurons)
+        { 
+            file << neuron.getNeuronId() << " ";
+            file << output << " ";
+            file << "\n";
+        }
+        // if (output_neurons.size() == 0) { std::cout << neuron.getNeuronId() << std::endl; }
     }
 
     file.close();
@@ -266,7 +269,9 @@ int main(int argc, char **argv)
 
     Unrolling::Model model;
     model.readConnections(args.getConnFile());
-    model.unroll(args.getFanin());
+
+    model.setFanin(args.getFanin());
+    model.unroll();
     model.output(args.getOutputFile());
 
     if (auto &debug_out = args.getDebugOutputFile();

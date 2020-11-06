@@ -67,10 +67,14 @@ class Model
     std::vector<Neuron> snn;
     std::vector<Neuron> usnn;
 
+    unsigned max_fanin;
+
   public:
     Model() {}
     void readConnections(const std::string&);
-    void unroll(unsigned);
+
+    void setFanin(unsigned _fanin) { max_fanin = _fanin; }
+    void unroll();
 
     void output(const std::string&);
 
