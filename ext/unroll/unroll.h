@@ -27,7 +27,8 @@ class Neuron
     Neuron(const Neuron &_copy) : neuron_id(_copy.neuron_id),
                                   input_neurons(_copy.input_neurons),
                                   output_neurons(_copy.output_neurons),
-                                  num_spikes(_copy.num_spikes) {}
+                                  num_spikes(_copy.num_spikes),
+                                  parent(_copy.parent) {}
 
     void addInputNeuron(UINT64 _in_neuron)
     {

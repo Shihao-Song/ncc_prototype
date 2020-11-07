@@ -227,7 +227,7 @@ void Model::unroll()
             unsigned num_inter_neurons = std::ceil(((float)num_inputs - (float)max_fanin) / 
                                                    ((float)max_fanin - 1)) + 1;
 
-            std::vector<UINT64> new_neurons;
+            // std::vector<UINT64> new_neurons;
             for (auto inter_neu_idx = 0; inter_neu_idx < num_inter_neurons; inter_neu_idx++)
             {
                 if (inter_neu_idx == 0)
@@ -247,7 +247,7 @@ void Model::unroll()
                     }
 
                     usnn[cur_unrolling_neuron_id].setNumSpikes(total_spikes);
-                    new_neurons.push_back(cur_unrolling_neuron_id);
+                    usnn[cur_unrolling_neuron_id].setParentId(usnn[idx].getNeuronId());
                     cur_unrolling_neuron_id++;
                 }
                 else if (inter_neu_idx == num_inter_neurons - 1)
@@ -297,16 +297,11 @@ void Model::unroll()
                     }
 
                     usnn[cur_unrolling_neuron_id].setNumSpikes(total_spikes);
+                    usnn[cur_unrolling_neuron_id].setParentId(usnn[idx].getNeuronId());
 
-                    new_neurons.push_back(cur_unrolling_neuron_id);
                     prev_unrolling_neuron_id = cur_unrolling_neuron_id;
                     cur_unrolling_neuron_id++;
                 }
-            }
-
-            for (auto new_neuron : new_neurons)
-            {
-                usnn[new_neuron].setParentId(usnn[idx].getNeuronId()); 
             }
         }
     }
