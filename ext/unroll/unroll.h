@@ -127,6 +127,9 @@ class Model
 
             auto parent = neuron.getParentId(); 
 
+            if (neuron.getNeuronId() < snn.size()) { assert(parent == INVALID_ID); }
+            else { assert(parent != INVALID_ID); }
+
             if (parent == INVALID_ID) { file << "-1" << "\n"; }
             else { file << parent << "\n"; }
         }
