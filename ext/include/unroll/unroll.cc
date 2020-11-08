@@ -1,54 +1,13 @@
 #include <algorithm>
-#include <boost/program_options.hpp>
 #include <boost/tokenizer.hpp>
 #include <cmath>
 
 #include "unroll/unroll.hh"
 
+namespace EXT
+{
 namespace Unrolling
 {
-Argument::Argument(int argc, char **argv)
-{
-    namespace po = boost::program_options;
-    po::options_description desc("Options"); 
-    desc.add_options() 
-        ("help", "Print help messages")
-        ("conn-file", po::value<std::string>(&connection_file)->required(),
-                 "Connection file")
-        ("spike-file", po::value<std::string>(&spike_file)->required(),
-                 "Spike file")
-        ("out-file", po::value<std::string>(&unrolled_output)->required(),
-                   "Unrolled SNN output file")
-        ("parent-neuron-out-file", po::value<std::string>(&parent_neu_output),
-                   "Parent neuron output file")
-        ("debug-out-file", po::value<std::string>(&debug_output),
-                   "Details of the unrolled SNN")
-        ("fanin", po::value<unsigned>(&fanin)->required(),
-                   "fanin");
-
-    po::variables_map vm;
-
-    try 
-    { 
-        po::store(po::parse_command_line(argc, argv, desc), vm); // can throw 
- 
-        if (vm.count("help")) 
-        { 
-            std::cout << "SNN unrolling extension.\n" 
-                      << desc << "\n"; 
-            exit(0);
-        } 
-
-        po::notify(vm);	
-    } 
-    catch(po::error& e) 
-    { 
-        std::cerr << "ERROR: " << e.what() << "\n\n"; 
-        std::cerr << desc << "\n"; 
-        exit(0);
-    }
-}
-
 Model::Model(const std::string& connection_file_name,
              const std::string& spike_file)
 {
@@ -306,7 +265,7 @@ void Model::unroll()
     // for (auto &neuron : usnn) { neuron.print_connections(); } exit(0);
 }
 
-void Model::output(const std::string &out_name)
+void Model::outputUnrolledIR(const std::string &out_name)
 {
     std::fstream file;
     file.open(out_name, std::fstream::out);
@@ -330,4 +289,4 @@ void Model::output(const std::string &out_name)
     return;
 }
 }
-
+}

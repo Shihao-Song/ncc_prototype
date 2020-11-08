@@ -7,6 +7,8 @@
 #include <string>
 #include <vector>
 
+namespace EXT
+{
 namespace Unrolling
 {
 typedef uint64_t UINT64;
@@ -84,9 +86,9 @@ class Model
 {
   protected:
     std::vector<Neuron> snn;
-    std::vector<Neuron> usnn;
+    std::vector<Neuron> usnn; // unrolled SNN
 
-    unsigned max_fanin;
+    unsigned max_fanin; // unrolling
 
   public:
     Model(const std::string&, const std::string&);
@@ -94,7 +96,7 @@ class Model
     void setFanin(unsigned _fanin) { max_fanin = _fanin; }
     void unroll();
 
-    void output(const std::string&);
+    void outputUnrolledIR(const std::string&);
 
     void debugOutput(const std::string &out_name)
     {
@@ -146,29 +148,7 @@ class Model
     void readConnections(const std::string&);
     void readSpikes(const std::string&);
 };
-
-class Argument
-{
-  protected:
-    std::string connection_file = "N/A";
-    std::string spike_file = "N/A";
-    std::string unrolled_output = "N/A";
-    std::string parent_neu_output = "N/A";
-    std::string debug_output = "N/A";
-
-    unsigned fanin = 0;
-
-  public:
-    Argument(int argc, char **argv);
-
-    auto getFanin() { return fanin; }
-    auto &getConnFile() { return connection_file; }
-    auto &getSpikeFile() { return spike_file; }
-    auto &getOutputFile() { return unrolled_output; }
-    auto &getDebugOutputFile() { return debug_output; }
-    auto &getParentNeuronOutputFile() { return parent_neu_output; }
-};
-
+}
 }
 
 #endif
