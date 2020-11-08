@@ -2,10 +2,8 @@
 #include <boost/program_options.hpp>
 #include <boost/tokenizer.hpp>
 #include <cmath>
-#include <fstream>
-#include <string>
 
-#include "unroll.h"
+#include "unroll/unroll.hh"
 
 namespace Unrolling
 {
@@ -333,31 +331,3 @@ void Model::output(const std::string &out_name)
 }
 }
 
-// First of all, you don't want to return back a large vector
-// The frequent copy and free can kill the performance and memory
-// A better alternative way is to put those rolled/unrolled SNNs into another class.
-int main(int argc, char **argv)
-{
-    Unrolling::Argument args(argc, argv);
-
-    Unrolling::Model model(args.getConnFile(),
-                           args.getSpikeFile());
-
-    model.setFanin(args.getFanin());
-    model.unroll();
-    model.output(args.getOutputFile());
-
-    if (auto &parent_neu_out = args.getParentNeuronOutputFile();
-        parent_neu_out != "N/A")
-    {
-        model.parentNeuronOutput(parent_neu_out);
-    }
-
-    if (auto &debug_out = args.getDebugOutputFile();
-        debug_out != "N/A")
-    {
-        model.debugOutput(debug_out);
-    }
-
-    return 0;
-}

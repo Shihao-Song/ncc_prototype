@@ -1,7 +1,10 @@
 #ifndef __UNROLL_H__
 #define __UNROLL_H__
 
+#include <cassert>
+#include <fstream>
 #include <iostream>
+#include <string>
 #include <vector>
 
 namespace Unrolling
