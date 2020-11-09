@@ -1,13 +1,15 @@
 #include "util/args.hh"
 #include "unroll/unroll.hh"
 
-// TODO, fanin -> should be optional
+typedef EXT::Argument Argument;
+typedef EXT::Unrolling::Model Model;
+
 int main(int argc, char **argv)
 {
-    EXT::Argument args(argc, argv);
+    Argument args(argc, argv);
 
-    EXT::Unrolling::Model model(args.getConnFile(),
-                                args.getSpikeFile());
+    Model model(args.getConnFile(),
+                args.getSpikeFile());
 
     if (auto fanin = args.getFanin();
         fanin != EXT::Argument::INVALID_FANIN)
@@ -27,6 +29,10 @@ int main(int argc, char **argv)
     {
         model.parentNeuronOutput(parent_neu_out);
     }
+
+    // Clustering
+    std::string test = "fcfs";
+    model.clustering(test);    
 
     return 0;
 }

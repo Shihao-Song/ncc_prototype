@@ -7,6 +7,8 @@
 #include <string>
 #include <vector>
 
+// #include "cluster/cluster.hh"
+
 namespace EXT
 {
 namespace Unrolling
@@ -14,6 +16,8 @@ namespace Unrolling
 typedef uint64_t UINT64;
 
 const UINT64 INVALID_ID = (UINT64) - 1;
+
+// typedef EXT::Clustering::Clusters Clusters;
 
 class Neuron
 {
@@ -24,7 +28,9 @@ class Neuron
 
     unsigned num_spikes = 0;
 
-    UINT64 parent = INVALID_ID;
+    UINT64 parent = INVALID_ID; // Which neuron it unrolls from
+
+    std::vector<UINT64> children; // All the intermediate neurons it unrolls
 
   public:
     Neuron() {}
@@ -60,6 +66,7 @@ class Neuron
     void setNeuronId(UINT64 _id) { neuron_id = _id; }
     int getNeuronId() { return neuron_id; };
 
+    // TODO, change this to ...Ref()
     std::vector<UINT64> &getInputNeuronList() { return input_neurons; };
     std::vector<UINT64> &getOutputNeuronList() { return output_neurons; };
 
@@ -67,6 +74,10 @@ class Neuron
 
     void setParentId(UINT64 _id) { parent = _id; }
     UINT64 getParentId() { return parent; }
+
+    void addChild(UINT64 _child) { children.push_back(_child); }
+    std::vector<UINT64> &getChildrenRef() { return children; }
+    std::vector<UINT64> getChildrenCopy() { return children; }
 
     std::vector<UINT64> getInputNeuronListCopy() { return input_neurons; };
     std::vector<UINT64> getOutputNeuronListCopy() { return output_neurons; };
@@ -92,6 +103,7 @@ class Model
 
   public:
     Model(const std::string&, const std::string&);
+    ~Model();
 
     void setFanin(unsigned _fanin) { max_fanin = _fanin; }
     void unroll();
@@ -147,6 +159,13 @@ class Model
     UINT64 extractMaxNeuronId(const std::string&);    
     void readConnections(const std::string&);
     void readSpikes(const std::string&);
+
+  // Clustering
+  protected:
+    void* clusters;
+
+  public:
+    void clustering(std::string &mode);
 };
 }
 }

@@ -4,12 +4,16 @@
 
 #include "unroll/unroll.hh"
 
+#include "cluster/cluster.hh"
+
 namespace EXT
 {
 namespace Unrolling
 {
+typedef EXT::Clustering::Clusters Clusters;
+
 Model::Model(const std::string& connection_file_name,
-             const std::string& spike_file)
+             const std::string& spike_file): clusters(new Clusters())
 {
     UINT64 max_neuron_id = extractMaxNeuronId(connection_file_name);
     // std::cout << "Max neuron ID: " << max_neuron_id << "\n";
@@ -25,14 +29,22 @@ Model::Model(const std::string& connection_file_name,
     readConnections(connection_file_name);
 
     // Initialize all the spike information
-    for (auto &neuron : snn)
+    // for (auto &neuron : snn)
+    for (auto i = 0; i < snn.size(); i++)
     {
-        auto &outputs = neuron.getOutputNeuronList();
+        auto &outputs = snn[i].getOutputNeuronList();
         for (auto &output : outputs) 
         {
-            snn[output].addNumSpikesFromOneInput(neuron.numOfSpikes());
+            snn[output].addNumSpikesFromOneInput(snn[i].numOfSpikes());
         }
     }
+
+}
+
+Model::~Model()
+{
+    Clusters* real_clusters = static_cast<Clusters*>(clusters);
+    delete real_clusters;
 }
 
 UINT64 Model::extractMaxNeuronId(const std::string &file_name)
@@ -205,6 +217,7 @@ void Model::unroll()
 
                     usnn[cur_unrolling_neuron_id].setNumSpikes(total_spikes);
                     usnn[cur_unrolling_neuron_id].setParentId(usnn[idx].getNeuronId());
+                    usnn[idx].addChild(cur_unrolling_neuron_id);
                     cur_unrolling_neuron_id++;
                 }
                 else if (inter_neu_idx == num_inter_neurons - 1)
@@ -255,6 +268,7 @@ void Model::unroll()
 
                     usnn[cur_unrolling_neuron_id].setNumSpikes(total_spikes);
                     usnn[cur_unrolling_neuron_id].setParentId(usnn[idx].getNeuronId());
+                    usnn[idx].addChild(cur_unrolling_neuron_id);
 
                     prev_unrolling_neuron_id = cur_unrolling_neuron_id;
                     cur_unrolling_neuron_id++;
@@ -287,6 +301,12 @@ void Model::outputUnrolledIR(const std::string &out_name)
 
     file.close();
     return;
+}
+
+void Model::clustering(std::string &mode)
+{
+    Clusters* real_clusters = static_cast<Clusters*>(clusters);
+    real_clusters->fcfs(usnn);
 }
 }
 }
