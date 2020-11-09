@@ -44,8 +44,17 @@ class Clusters
         std::vector<UINT64> inputs;
         std::vector<UINT64> outputs;
 
+      protected:
+        const unsigned CROSSBAR_SIZE = 4;
+
       public:
-        Cluster() {}
+        Cluster(UINT64 _id) : cluster_id(_id) {}
+
+        bool canBePacked(unsigned num_inputs)
+        {
+            return (((inputs.size() + num_inputs) < CROSSBAR_SIZE) && 
+                     (outputs.size() < CROSSBAR_SIZE));
+        }
     };
 
     std::vector<Cluster> clusters;

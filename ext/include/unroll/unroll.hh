@@ -7,8 +7,6 @@
 #include <string>
 #include <vector>
 
-// #include "cluster/cluster.hh"
-
 namespace EXT
 {
 namespace Unrolling
@@ -16,8 +14,6 @@ namespace Unrolling
 typedef uint64_t UINT64;
 
 const UINT64 INVALID_ID = (UINT64) - 1;
-
-// typedef EXT::Clustering::Clusters Clusters;
 
 class Neuron
 {
@@ -69,11 +65,14 @@ class Neuron
     // TODO, change this to ...Ref()
     std::vector<UINT64> &getInputNeuronList() { return input_neurons; };
     std::vector<UINT64> &getOutputNeuronList() { return output_neurons; };
+    unsigned numInputNeurons() { return input_neurons.size(); }
+    unsigned numOutputNeurons() { return output_neurons.size(); }
 
     unsigned numOfSpikes() { return num_spikes; }
 
     void setParentId(UINT64 _id) { parent = _id; }
     UINT64 getParentId() { return parent; }
+    bool hasParent() { return parent != INVALID_ID; }
 
     void addChild(UINT64 _child) { children.push_back(_child); }
     std::vector<UINT64> &getChildrenRef() { return children; }
