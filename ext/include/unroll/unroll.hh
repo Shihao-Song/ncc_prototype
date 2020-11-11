@@ -35,7 +35,8 @@ class Neuron
                                   input_neurons(_copy.input_neurons),
                                   output_neurons(_copy.output_neurons),
                                   num_spikes(_copy.num_spikes),
-                                  parent(_copy.parent) {}
+                                  parent(_copy.parent),
+                                  children(_copy.children) {}
 
     void addInputNeuron(UINT64 _in_neuron)
     {
