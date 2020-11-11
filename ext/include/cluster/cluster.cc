@@ -11,7 +11,8 @@ void Clusters::fcfs(std::vector<Neuron>& snn)
 {
     // Record the clustering status for each neuron
     neuron_status.resize(snn.size());
-    
+    debugPrint();
+
     for (auto cur_neuron_idx = 0;
               cur_neuron_idx < snn.size();
               cur_neuron_idx++)
@@ -20,6 +21,11 @@ void Clusters::fcfs(std::vector<Neuron>& snn)
 
         if (snn[cur_neuron_idx].numInputNeurons()) 
         {
+            // All the input neurons before unrolling
+            std::list<UINT64> non_unrolled_inputs;
+            // Input neuron -> Output neuron mapping
+            std::unordered_map<UINT64, UINT64> input_to_output_map;
+
             // Case 1: the neuron is unrolled
             if (auto &children = snn[cur_neuron_idx].getChildrenRef();
                     children.size() > 0)
@@ -27,8 +33,6 @@ void Clusters::fcfs(std::vector<Neuron>& snn)
                 std::set<UINT64> intermediate_neurons;
                 for (auto &child : children) { intermediate_neurons.insert(child); }
 
-                std::list<UINT64> non_unrolled_inputs;
-                std::unordered_map<UINT64, UINT64> input_to_output_map;
                 for (auto &inter_neuron : children)
                 {
                     for (auto &raw_input : snn[inter_neuron].getInputNeuronList())
@@ -48,48 +52,49 @@ void Clusters::fcfs(std::vector<Neuron>& snn)
                         input_to_output_map.insert({raw_input, cur_neuron_idx});
                     }
 		}
-
-                // std::cout << "Inputs: ";
-                // for (auto &input : non_unrolled_inputs) { std::cout << input << " "; }
-                // std::cout << "\n";
-                
-                std::sort(sorted_clusters.begin(),
-                          sorted_clusters.end(),
-                          [](auto &left, auto &right)
-                          {
-                              return left->getUtilization() > right->getUtilization();
-                          });
-                
-                for (auto &cluster : sorted_clusters)
-                {
-                    if (non_unrolled_inputs.size() == 0) { break; }
-
-                    packToCluster(snn[cur_neuron_idx].getNeuronId(),
-                                  cluster->getClusterId(),
-                                  input_to_output_map,
-                                  non_unrolled_inputs);
-                }
-                // std::cout << "Inputs: ";
-                // for (auto &input : non_unrolled_inputs) { std::cout << input << " "; }
-                // std::cout << "\n";
-
-                // Need new clusters to map the rest
-                while (true)
-                {
-                    if (non_unrolled_inputs.size() == 0) { break; }
-
-                    auto cid = addCluster();
-                    packToCluster(snn[cur_neuron_idx].getNeuronId(),
-                                  cid,
-                                  input_to_output_map,
-                                  non_unrolled_inputs);
-                }
-                debugPrint(); exit(0);
             }
-            // else
-            // {
-            
-            // }
+            // Case 2: the neuron is not unrolled
+            else
+            {
+                for (auto &input_to_pack : snn[cur_neuron_idx].getInputNeuronList())
+                {
+                    non_unrolled_inputs.push_back(input_to_pack);
+                    input_to_output_map.insert({input_to_pack,
+                                                snn[cur_neuron_idx].getNeuronId()});
+                }
+            }
+            std::sort(sorted_clusters.begin(),
+                      sorted_clusters.end(),
+                      [](auto &left, auto &right)
+                      {
+                          return left->getUtilization() > right->getUtilization();
+                      });
+
+            for (auto &cluster : sorted_clusters)
+            {
+                if (non_unrolled_inputs.size() == 0) { break; }
+
+                packToCluster(snn[cur_neuron_idx].getNeuronId(),
+                              cluster->getClusterId(),
+                              input_to_output_map,
+                              non_unrolled_inputs);
+            }
+            // std::cout << "Inputs: ";
+            // for (auto &input : non_unrolled_inputs) { std::cout << input << " "; }
+            // std::cout << "\n";
+
+            // Need new clusters to map the rest
+            while (true)
+            {
+                if (non_unrolled_inputs.size() == 0) { break; }
+
+                auto cid = addCluster();
+                packToCluster(snn[cur_neuron_idx].getNeuronId(),
+                              cid,
+                              input_to_output_map,
+                              non_unrolled_inputs);
+            }
+            debugPrint();
         }
     }
 }
