@@ -119,6 +119,42 @@ class Clusters
     Clusters(){}
     void fcfs(std::vector<Neuron>&);
 
+    void printClusterIR(std::string &_out)
+    {
+        std::fstream file;
+        file.open(_out, std::fstream::out);
+
+        for (auto &cluster : clusters)
+        {
+            UINT64 cid = cluster->getClusterId();
+
+            for (auto &conn_cluster : cluster->getConnectedClustersRef())
+            {
+                file << cid << " "
+                     << conn_cluster << " "
+                     << cluster->numOfSpikes(conn_cluster) << "\n";
+            }
+        }
+        file.close();
+    }
+    void printClusterStats(std::string &_out)
+    {
+        std::fstream file;
+        file.open(_out, std::fstream::out);
+
+        for (auto &cluster : clusters)
+        {
+            UINT64 cid = cluster->getClusterId();
+
+            unsigned num_inputs = cluster->getInputsListRef().size();
+            unsigned num_outputs = cluster->getOutputsListRef().size();
+
+            file << cid << " " << num_inputs << " " << num_outputs << "\n";
+        }
+
+        file.close();
+    }
+
   protected: // Helper function
     UINT64 addCluster()
     {
@@ -141,6 +177,21 @@ class Clusters
                        std::list<UINT64> &non_unrolled_inputs);
 
   protected:
+    void postClustering()
+    {
+        for (auto &cluster : clusters)
+        {
+            for (auto &output : cluster->getOutputsListRef())
+            {
+                for (auto &conn_cluster : neuron_status[output].getConnectedClustersRef())
+                {
+                    cluster->addNumSpikes(conn_cluster, neuron_status[output].numOfSpikes());
+                    cluster->addConnectedCluster(conn_cluster);
+                }
+            }
+        }
+    }
+
     void debugPrint()
     {
         std::cout << "-------------------------------\n";
@@ -151,6 +202,7 @@ class Clusters
             for (auto &input : cluster->getInputsListRef()) { std::cout << input << " "; }
             std::cout << "\nOutput Neurons: ";
             for (auto &output : cluster->getOutputsListRef()) { std::cout << output << " "; }
+            /*
             for (auto &output : cluster->getOutputsListRef())
             {
                 for (auto &conn_cluster : neuron_status[output].getConnectedClustersRef())
@@ -159,7 +211,7 @@ class Clusters
                     cluster->addConnectedCluster(conn_cluster);
                 }
             }
-            
+            */
             std::cout << "\nConnected Clusters: ";
             for (auto &conn_cluster : cluster->getConnectedClustersRef())
             {

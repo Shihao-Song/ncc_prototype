@@ -166,6 +166,8 @@ class Model
 
   public:
     void clustering(std::string &mode);
+    void printClusterIR(std::string &_out);
+    void printClusterStats(std::string &_out);
 };
 }
 }

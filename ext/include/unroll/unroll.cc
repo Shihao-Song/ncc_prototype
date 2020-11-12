@@ -308,5 +308,18 @@ void Model::clustering(std::string &mode)
     Clusters* real_clusters = static_cast<Clusters*>(clusters);
     real_clusters->fcfs(usnn);
 }
+
+void Model::printClusterIR(std::string &_out)
+{
+    Clusters* real_clusters = static_cast<Clusters*>(clusters);
+    real_clusters->printClusterIR(_out);
+}
+
+void Model::printClusterStats(std::string &_out)
+{
+    Clusters* real_clusters = static_cast<Clusters*>(clusters);	
+    real_clusters->printClusterStats(_out);
+}
+
 }
 }

@@ -106,11 +106,12 @@ void Clusters::fcfs(std::vector<Neuron>& snn)
                               input_to_output_map,
                               non_unrolled_inputs);
             }
-            std::cout << "Mapped neuron id: " << snn[cur_neuron_idx].getNeuronId() << "\n";
+            // std::cout << "Mapped neuron id: " << snn[cur_neuron_idx].getNeuronId() << "\n";
             // debugPrint();
         }
     }
-    debugPrint();
+    postClustering();
+    // debugPrint();
 }
 
 void Clusters::packToCluster(UINT64 cur_neuron_idx, 
@@ -118,6 +119,12 @@ void Clusters::packToCluster(UINT64 cur_neuron_idx,
                              std::unordered_map<UINT64, UINT64> &input_to_output_map,
                              std::list<UINT64> &non_unrolled_inputs)
 {
+    // if (cur_neuron_idx == 8957)
+    // {
+    //     std::cout << clusters[cid]->getInputsListRef().size() << "\n";
+    //     std::cout << clusters[cid]->getOutputsListRef().size() << "\n";
+    // }
+
     unsigned total_inputs_can_be_packed = 0;
     unsigned new_inputs_to_be_packed = 0;
     for (auto &pending_input : non_unrolled_inputs)
@@ -125,20 +132,22 @@ void Clusters::packToCluster(UINT64 cur_neuron_idx,
         if (!clusters[cid]->isInputMapped(pending_input))
         {
             new_inputs_to_be_packed++;
-            if (clusters[cid]->canBePacked(new_inputs_to_be_packed))
-            {
-                total_inputs_can_be_packed++;
-            }
-            else
-            {
-                break;
-            }
         }
-        else
+
+        if (clusters[cid]->canBePacked(new_inputs_to_be_packed))
         {
             total_inputs_can_be_packed++;
         }
+        else
+	{
+	    break;
+	}
     }
+
+    // if (cur_neuron_idx == 8957)
+    // {
+    //     std::cout << total_inputs_can_be_packed << "\n"; exit(0);
+    // }
 
     // It must be able to provide MIN_FANIN number of input ports
     if (total_inputs_can_be_packed >= MIN_FANIN && 
@@ -175,6 +184,8 @@ void Clusters::packToCluster(UINT64 cur_neuron_idx,
         {
             non_unrolled_inputs.push_front(inter_neuron_id);
         }
+        assert(clusters[cid]->getInputsListRef().size() <= CROSSBAR_SIZE);
+        assert(clusters[cid]->getOutputsListRef().size() <= CROSSBAR_SIZE);
     }
 }
 }

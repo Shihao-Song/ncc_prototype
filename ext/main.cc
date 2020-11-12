@@ -34,5 +34,19 @@ int main(int argc, char **argv)
     std::string test = "fcfs";
     model.clustering(test);    
 
+    if (auto &cluster_ir = args.getClusterIROutputFile();
+        cluster_ir != "N/A")
+    {
+        // std::cout << cluster_ir << "\n";
+        model.printClusterIR(cluster_ir);
+    }
+    
+    if (auto &cluster_stats = args.getClusterStatsFile();
+        cluster_stats != "N/A")
+    {
+        // std::cout << cluster_stats << "\n";
+        model.printClusterStats(cluster_stats);
+    }
+
     return 0;
 }
