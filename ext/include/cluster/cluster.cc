@@ -11,7 +11,15 @@ void Clusters::fcfs(std::vector<Neuron>& snn)
 {
     // Record the clustering status for each neuron
     neuron_status.resize(snn.size());
-    debugPrint();
+    for (auto &neuron : snn)
+    {
+        UINT64 id = neuron.getNeuronId();
+        unsigned spikes = neuron.numOfSpikes();
+
+        neuron_status[id].setNumOfSpikes(spikes);
+    }
+
+    // debugPrint();
 
     for (auto cur_neuron_idx = 0;
               cur_neuron_idx < snn.size();
@@ -21,10 +29,12 @@ void Clusters::fcfs(std::vector<Neuron>& snn)
 
         if (snn[cur_neuron_idx].numInputNeurons()) 
         {
+            std::cout << "\nMapping neuron id: " << snn[cur_neuron_idx].getNeuronId() << "\n";
             // All the input neurons before unrolling
             std::list<UINT64> non_unrolled_inputs;
             // Input neuron -> Output neuron mapping
             std::unordered_map<UINT64, UINT64> input_to_output_map;
+
 
             // Case 1: the neuron is unrolled
             if (auto &children = snn[cur_neuron_idx].getChildrenRef();
@@ -86,6 +96,8 @@ void Clusters::fcfs(std::vector<Neuron>& snn)
             // Need new clusters to map the rest
             while (true)
             {
+                static unsigned counter = 0;
+
                 if (non_unrolled_inputs.size() == 0) { break; }
 
                 auto cid = addCluster();
@@ -94,9 +106,11 @@ void Clusters::fcfs(std::vector<Neuron>& snn)
                               input_to_output_map,
                               non_unrolled_inputs);
             }
-            debugPrint();
+            std::cout << "Mapped neuron id: " << snn[cur_neuron_idx].getNeuronId() << "\n";
+            // debugPrint();
         }
     }
+    debugPrint();
 }
 
 void Clusters::packToCluster(UINT64 cur_neuron_idx, 
@@ -127,7 +141,10 @@ void Clusters::packToCluster(UINT64 cur_neuron_idx,
     }
 
     // It must be able to provide MIN_FANIN number of input ports
-    if (total_inputs_can_be_packed >= MIN_FANIN)
+    if (total_inputs_can_be_packed >= MIN_FANIN && 
+        non_unrolled_inputs.size() >= MIN_FANIN ||
+        non_unrolled_inputs.size() < MIN_FANIN &&
+        total_inputs_can_be_packed == non_unrolled_inputs.size())
     {
         UINT64 last_input_packed = INVALID_ID;
         unsigned cur_packed = 0;

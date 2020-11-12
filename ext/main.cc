@@ -12,7 +12,7 @@ int main(int argc, char **argv)
                 args.getSpikeFile());
 
     if (auto fanin = args.getFanin();
-        fanin != EXT::Argument::INVALID_FANIN)
+        fanin != EXT::Argument::INVALID)
     {
         model.setFanin(args.getFanin());
         model.unroll();

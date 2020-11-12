@@ -20,7 +20,13 @@ Argument::Argument(int argc, char **argv)
         ("unroll-parent-out", po::value<std::string>(&unrolled_parent_output),
                    "Unrolled parent neurons output file")
         ("unroll-fanin", po::value<unsigned>(&unrolled_fanin),
-                   "Max fanin to unroll");
+                   "Max fanin to unroll")
+        ("cluster-crossbar-size", po::value<unsigned>(&crossbar_size),
+                   "Crossbar size")
+        ("cluster-stats", po::value<std::string>(&cluster_stats),
+                   "Clustering stats")
+        ("cluster-ir-out", po::value<std::string>(&cluster_ir_output),
+                   "Clustering IR output file");
 
     po::variables_map vm;
 
