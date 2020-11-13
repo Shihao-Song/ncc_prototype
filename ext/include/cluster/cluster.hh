@@ -129,7 +129,20 @@ class Clusters
     : MIN_FANIN(_fanin)
     , CROSSBAR_SIZE(_crossbar_size)
     {}
-    void fcfs(std::vector<Neuron>&);
+
+    void clustering(std::vector<Neuron> &snn, std::string &mode)
+    {
+        if (mode == "min-clusters")
+        {
+            minClusters(snn);
+        }
+        else
+        {
+            std::cout << "---------------------------------------\n";
+            std::cerr << "Error: unsupported clustering algorithm\n";
+            return;
+        }
+    }
 
     void printClusterIR(std::string &_out)
     {
@@ -168,6 +181,8 @@ class Clusters
     }
 
   protected: // Helper function
+    void minClusters(std::vector<Neuron>&);
+
     UINT64 addCluster()
     {
         UINT64 cid = clusters.size();
@@ -207,7 +222,7 @@ class Clusters
 
     void debugPrint()
     {
-        std::cout << "-------------------------------\n";
+        std::cout << "---------------------------------------\n";
         for (auto &cluster : clusters)
         {
             std::cout << "Cluster ID: " << cluster->getClusterId() << "\n";

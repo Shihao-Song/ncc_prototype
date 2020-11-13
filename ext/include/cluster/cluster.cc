@@ -7,8 +7,14 @@ namespace EXT
 namespace Clustering
 {
 // The goal is to minimize the number of clusters
-void Clusters::fcfs(std::vector<Neuron>& snn)
+void Clusters::minClusters(std::vector<Neuron>& snn)
 {
+    std::cout << "---------------------------------------\n";
+    std::cout << "Clustering Step - Minimize Clusters#\n";
+    std::cout << "Minimum fanin: " << MIN_FANIN << "\n";
+    std::cout << "Crossbar size: " << CROSSBAR_SIZE << "\n";
+    std::cout << "---------------------------------------\n";
+
     // Record the clustering status for each neuron
     neuron_status.resize(snn.size());
     for (auto &neuron : snn)
@@ -34,7 +40,6 @@ void Clusters::fcfs(std::vector<Neuron>& snn)
             std::list<UINT64> non_unrolled_inputs;
             // Input neuron -> Output neuron mapping
             std::unordered_map<UINT64, UINT64> input_to_output_map;
-
 
             // Case 1: the neuron is unrolled
             if (auto &children = snn[cur_neuron_idx].getChildrenRef();

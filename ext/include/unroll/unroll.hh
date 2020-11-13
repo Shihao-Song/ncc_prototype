@@ -161,7 +161,7 @@ class Model
 
   // Clustering
   protected:
-    void* clusters;
+    void* clusters = nullptr;
 
   public:
     void clustering(std::string &mode);

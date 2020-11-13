@@ -26,8 +26,7 @@ int main(int argc, char **argv)
     }
 
     // Clustering
-    std::string test = "fcfs";
-    model.clustering(test);    
+    model.clustering(args.getClusteringAlgo());    
 
     if (auto &cluster_ir = args.getClusterIROutputFile();
         cluster_ir != "N/A")

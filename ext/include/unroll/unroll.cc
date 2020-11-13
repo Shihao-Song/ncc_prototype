@@ -164,13 +164,17 @@ void Model::readConnections(const std::string &connection_file_name)
 // A simple proof-of-concept version of unroll
 void Model::unroll()
 {
+    std::cout << "---------------------------------------\n";
+    std::cout << "Unrolling Step\n";
+    std::cout << "Maximum fanin: " << max_fanin << "\n";
+    std::cout << "---------------------------------------\n";
+
     // Initialize the unrolled neurons
     for (auto i = 0; i < snn.size(); i++)
     {
         // emplace_back should be more space-efficient than push_back
         usnn.emplace_back(snn[i]);
     }
-
     
     // Look for all the neurons that have more than max_fanin number of inputs
     for (auto idx = 0; idx < snn.size(); idx++)
@@ -183,6 +187,9 @@ void Model::unroll()
         // Check if the number of inputs exceed max_fanin
         if (input_neurons_copy.size() > max_fanin)
         {
+            std::cout << "\nUnrolling neuron id: "
+                      << usnn[idx].getNeuronId() << "\n";
+
             // Step one, reset the output neuron of all the input neurons
             for (auto &input_neuron : input_neurons_copy)
             {
@@ -312,7 +319,7 @@ void Model::outputUnrolledIR(const std::string &out_name)
 void Model::clustering(std::string &mode)
 {
     Clusters* real_clusters = static_cast<Clusters*>(clusters);
-    real_clusters->fcfs(usnn);
+    real_clusters->clustering(usnn, mode);
 }
 
 void Model::printClusterIR(std::string &_out)

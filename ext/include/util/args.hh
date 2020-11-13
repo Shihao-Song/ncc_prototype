@@ -19,11 +19,14 @@ class Argument
     unsigned unrolled_fanin = INVALID;
     unsigned crossbar_size = INVALID;
 
+    std::string clustering_algo = "N/A";
+
   public:
     Argument(int argc, char **argv);
 
     auto getFanin() { return unrolled_fanin; }
     auto getCrossbarSize() { return crossbar_size; }
+    auto &getClusteringAlgo() { return clustering_algo; }
     auto &getConnFile() { return connection_file; }
     auto &getSpikeFile() { return spike_file; }
     auto &getUnrolledIROutputFile() { return unrolled_ir_output; }

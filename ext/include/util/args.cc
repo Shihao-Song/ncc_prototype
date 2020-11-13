@@ -19,6 +19,8 @@ Argument::Argument(int argc, char **argv)
                    "Max fanin to unroll")
         ("cluster-crossbar-size", po::value<unsigned>(&crossbar_size)->required(),
                    "Crossbar size")
+        ("clustering-algo", po::value<std::string>(&clustering_algo)->required(),
+            "Clustering algorithms: random, min-clusters")
         ("unroll-ir-out", po::value<std::string>(&unrolled_ir_output),
                    "Unrolled IR output file")
         ("unroll-parent-out", po::value<std::string>(&unrolled_parent_output),
