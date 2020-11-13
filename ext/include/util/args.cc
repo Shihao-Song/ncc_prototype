@@ -15,11 +15,11 @@ Argument::Argument(int argc, char **argv)
                  "Connection file")
         ("spike-file", po::value<std::string>(&spike_file)->required(),
                  "Spike file")
-        ("unroll-fanin", po::value<unsigned>(&unrolled_fanin)->required(),
+        ("unroll-fanin", po::value<unsigned>(&unrolled_fanin),
                    "Max fanin to unroll")
-        ("cluster-crossbar-size", po::value<unsigned>(&crossbar_size)->required(),
+        ("cluster-crossbar-size", po::value<unsigned>(&crossbar_size),
                    "Crossbar size")
-        ("clustering-algo", po::value<std::string>(&clustering_algo)->required(),
+        ("clustering-algo", po::value<std::string>(&clustering_algo),
             "Clustering algorithms: random, min-clusters")
         ("unroll-ir-out", po::value<std::string>(&unrolled_ir_output),
                    "Unrolled IR output file")

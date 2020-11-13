@@ -24,14 +24,50 @@ class Argument
   public:
     Argument(int argc, char **argv);
 
-    auto getFanin() { return unrolled_fanin; }
-    auto getCrossbarSize() { return crossbar_size; }
-    auto &getClusteringAlgo() { return clustering_algo; }
-    auto &getConnFile() { return connection_file; }
-    auto &getSpikeFile() { return spike_file; }
-    auto &getUnrolledIROutputFile() { return unrolled_ir_output; }
-    auto &getUnrolledParentOutputFile() { return unrolled_parent_output; }
-    auto &getClusterIROutputFile() { return cluster_ir_output; }
-    auto &getClusterStatsFile() { return cluster_stats; }
+    auto getFanin() 
+    {
+        bool unroll_en = (unrolled_fanin != INVALID) ? true : false; 
+        return std::make_pair(unroll_en, unrolled_fanin); 
+    }
+    auto getCrossbarSize()
+    {
+        bool valid = (crossbar_size != INVALID) ? true : false;
+        return std::make_pair(valid, crossbar_size);
+    }
+    std::pair<bool,std::string&> getClusteringAlgo()
+    {
+        bool en = (clustering_algo != "N/A") ? true : false;
+        return std::pair<bool,std::string&>(en, clustering_algo);
+    }
+
+    std::string& getConnFile() // This file is required
+    { 
+        return connection_file;
+    }
+    std::string& getSpikeFile() // This file is required
+    { 
+        return spike_file; 
+    }
+
+    std::pair<bool,std::string&> getUnrolledIROutputFile()
+    {
+        bool valid = (unrolled_ir_output != "N/A") ? true : false; 
+        return std::pair<bool,std::string&>(valid,unrolled_ir_output);
+    }
+    std::pair<bool,std::string&> getUnrolledParentOutputFile()
+    {
+        bool valid = (unrolled_parent_output != "N/A") ? true : false;
+        return std::pair<bool,std::string&>(valid,unrolled_parent_output);
+    }
+    std::pair<bool,std::string&> getClusterIROutputFile()
+    {
+        bool valid = (cluster_ir_output != "N/A") ? true : false;
+        return std::pair<bool,std::string&>(valid,cluster_ir_output);
+    }
+    std::pair<bool,std::string&> getClusterStatsFile()
+    {
+        bool valid = (cluster_stats != "N/A") ? true : false;
+        return std::pair<bool,std::string&>(valid,cluster_stats);
+    }
 };
 }

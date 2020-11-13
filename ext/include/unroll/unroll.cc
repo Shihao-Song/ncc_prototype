@@ -13,11 +13,7 @@ namespace Unrolling
 typedef EXT::Clustering::Clusters Clusters;
 
 Model::Model(const std::string& connection_file_name,
-             const std::string& spike_file,
-             const unsigned _fanin,
-             const unsigned _crossbar_size)
-    : max_fanin(_fanin)
-    , clusters(new Clusters(_fanin, _crossbar_size))
+             const std::string& spike_file)
 {
     UINT64 max_neuron_id = extractMaxNeuronId(connection_file_name);
     // std::cout << "Max neuron ID: " << max_neuron_id << "\n";
@@ -42,9 +38,6 @@ Model::Model(const std::string& connection_file_name,
             snn[output].addNumSpikesFromOneInput(snn[i].numOfSpikes());
         }
     }
-
-    // unroll the model
-    unroll();
 }
 
 Model::~Model()
@@ -294,6 +287,8 @@ void Model::unroll()
 
 void Model::outputUnrolledIR(const std::string &out_name)
 {
+    if (usnn.size() == 0) { return; }
+
     std::fstream file;
     file.open(out_name, std::fstream::out);
 
@@ -316,23 +311,32 @@ void Model::outputUnrolledIR(const std::string &out_name)
     return;
 }
 
-void Model::clustering(std::string &mode)
+void Model::clustering(std::string &mode, unsigned crossbar_size)
 {
+    clusters = new Clusters(max_fanin, crossbar_size);
     Clusters* real_clusters = static_cast<Clusters*>(clusters);
-    real_clusters->clustering(usnn, mode);
+    if (usnn.size())
+    {
+        real_clusters->clustering(usnn, mode);
+    }
+    else
+    {
+        real_clusters->clustering(snn, mode);
+    }
 }
 
 void Model::printClusterIR(std::string &_out)
 {
+    if (clusters == nullptr) { return; }
     Clusters* real_clusters = static_cast<Clusters*>(clusters);
     real_clusters->printClusterIR(_out);
 }
 
 void Model::printClusterStats(std::string &_out)
 {
+    if (clusters == nullptr) { return; }
     Clusters* real_clusters = static_cast<Clusters*>(clusters);	
     real_clusters->printClusterStats(_out);
 }
-
 }
 }

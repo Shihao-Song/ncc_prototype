@@ -41,16 +41,16 @@ typedef EXT::Unrolling::Neuron Neuron;
 class Clusters
 {
   protected:
-    const unsigned MIN_FANIN; // A cross-bar needs to be at least 
-                              // have 2 input ports available
+    const unsigned INVALID_FANIN = (unsigned) - 1;
+
+    unsigned MIN_FANIN; 
     const unsigned CROSSBAR_SIZE;
 
   protected:
     class Cluster
     {
       protected:
-        const unsigned MIN_FANIN; // A cross-bar needs to be at least 
-                                  // have 2 input ports available
+        const unsigned MIN_FANIN; 
         const unsigned CROSSBAR_SIZE;
 
       protected:
@@ -126,9 +126,13 @@ class Clusters
 
   public:
     Clusters(unsigned _fanin, unsigned _crossbar_size)
-    : MIN_FANIN(_fanin)
-    , CROSSBAR_SIZE(_crossbar_size)
-    {}
+    : CROSSBAR_SIZE(_crossbar_size)
+    {
+        if (_fanin == INVALID_FANIN) { MIN_FANIN = CROSSBAR_SIZE; }
+        else { MIN_FANIN = _fanin; }
+        assert(MIN_FANIN <= CROSSBAR_SIZE); // When the unrolling fanin larger than crossbar,
+                                            // it is not supported.
+    }
 
     void clustering(std::vector<Neuron> &snn, std::string &mode)
     {
@@ -138,7 +142,7 @@ class Clusters
         }
         else
         {
-            std::cout << "---------------------------------------\n";
+            std::cerr << "---------------------------------------\n";
             std::cerr << "Error: unsupported clustering algorithm\n";
             return;
         }

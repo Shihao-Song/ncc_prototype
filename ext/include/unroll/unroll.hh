@@ -99,12 +99,15 @@ class Model
     std::vector<Neuron> snn;
     std::vector<Neuron> usnn; // unrolled SNN
 
-    const unsigned max_fanin; // unrolling
+    // const unsigned INVALID_FANIN = (unsigned) - 1;
+
+    unsigned max_fanin = (unsigned) - 1; // unrolling
 
   public:
-    Model(const std::string&, const std::string&, const unsigned, const unsigned);
+    Model(const std::string&, const std::string&);
     ~Model();
 
+    void setFanin(UINT64 _fanin) { max_fanin = _fanin; }
     void unroll();
 
     void outputUnrolledIR(const std::string&);
@@ -134,6 +137,8 @@ class Model
 
     void parentNeuronOutput(const std::string &out_name)
     {
+        if (usnn.size() == 0) { return; }
+
         std::fstream file;
         file.open(out_name, std::fstream::out);
 
@@ -164,7 +169,7 @@ class Model
     void* clusters = nullptr;
 
   public:
-    void clustering(std::string &mode);
+    void clustering(std::string &mode,unsigned);
     void printClusterIR(std::string &_out);
     void printClusterStats(std::string &_out);
 };

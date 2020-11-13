@@ -71,8 +71,12 @@ void Clusters::minClusters(std::vector<Neuron>& snn)
             // Case 2: the neuron is not unrolled
             else
             {
-                for (auto &input_to_pack : snn[cur_neuron_idx].getInputNeuronList())
+                auto &inputs_to_pack = snn[cur_neuron_idx].getInputNeuronList();
+                for (auto i = 0; i < inputs_to_pack.size(); i++)
                 {
+                    auto input_to_pack = inputs_to_pack[i];
+                    if (i == CROSSBAR_SIZE) { break; }
+
                     non_unrolled_inputs.push_back(input_to_pack);
                     input_to_output_map.insert({input_to_pack,
                                                 snn[cur_neuron_idx].getNeuronId()});
@@ -116,7 +120,7 @@ void Clusters::minClusters(std::vector<Neuron>& snn)
         }
     }
     postClustering();
-    debugPrint();
+    // debugPrint();
 }
 
 void Clusters::packToCluster(UINT64 cur_neuron_idx, 
