@@ -111,7 +111,7 @@ void Clusters::fcfs(std::vector<Neuron>& snn)
         }
     }
     postClustering();
-    // debugPrint();
+    debugPrint();
 }
 
 void Clusters::packToCluster(UINT64 cur_neuron_idx, 
@@ -119,12 +119,6 @@ void Clusters::packToCluster(UINT64 cur_neuron_idx,
                              std::unordered_map<UINT64, UINT64> &input_to_output_map,
                              std::list<UINT64> &non_unrolled_inputs)
 {
-    // if (cur_neuron_idx == 8957)
-    // {
-    //     std::cout << clusters[cid]->getInputsListRef().size() << "\n";
-    //     std::cout << clusters[cid]->getOutputsListRef().size() << "\n";
-    // }
-
     unsigned total_inputs_can_be_packed = 0;
     unsigned new_inputs_to_be_packed = 0;
     for (auto &pending_input : non_unrolled_inputs)
@@ -143,11 +137,6 @@ void Clusters::packToCluster(UINT64 cur_neuron_idx,
 	    break;
 	}
     }
-
-    // if (cur_neuron_idx == 8957)
-    // {
-    //     std::cout << total_inputs_can_be_packed << "\n"; exit(0);
-    // }
 
     // It must be able to provide MIN_FANIN number of input ports
     if (total_inputs_can_be_packed >= MIN_FANIN && 

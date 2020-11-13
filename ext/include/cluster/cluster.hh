@@ -36,17 +36,23 @@ class Neuron_Status
     std::set<UINT64> getConnectedClustersCopy() { return connected_clusters; }
     void addConnectedCluster(UINT64 _cluster) { connected_clusters.insert(_cluster); }
 };
-        
-static const unsigned MIN_FANIN = 2; // A cross-bar needs to be at least 
-                                     // have 2 input ports available
-static const unsigned CROSSBAR_SIZE = 128;
 
 typedef EXT::Unrolling::Neuron Neuron;
 class Clusters
 {
   protected:
+    const unsigned MIN_FANIN; // A cross-bar needs to be at least 
+                              // have 2 input ports available
+    const unsigned CROSSBAR_SIZE;
+
+  protected:
     class Cluster
     {
+      protected:
+        const unsigned MIN_FANIN; // A cross-bar needs to be at least 
+                                  // have 2 input ports available
+        const unsigned CROSSBAR_SIZE;
+
       protected:
         UINT64 cluster_id = INVALID_ID;
 
@@ -58,7 +64,10 @@ class Clusters
         std::unordered_map<UINT64, UINT64> cluster_spikes_map;
       // public:
       public:
-        Cluster(UINT64 _id) : cluster_id(_id) {}
+        Cluster(UINT64 _id, unsigned _fanin, unsigned _crossbar_size)
+            : MIN_FANIN(_fanin)
+            , CROSSBAR_SIZE(_crossbar_size)
+            , cluster_id(_id) {}
 
         UINT64 getClusterId() { return cluster_id; }
 
@@ -116,7 +125,10 @@ class Clusters
     std::vector<Cluster*> sorted_clusters;
 
   public:
-    Clusters(){}
+    Clusters(unsigned _fanin, unsigned _crossbar_size)
+    : MIN_FANIN(_fanin)
+    , CROSSBAR_SIZE(_crossbar_size)
+    {}
     void fcfs(std::vector<Neuron>&);
 
     void printClusterIR(std::string &_out)
@@ -160,7 +172,8 @@ class Clusters
     {
         UINT64 cid = clusters.size();
 
-        std::unique_ptr<Cluster> cluster = std::make_unique<Cluster>(cid);
+        std::unique_ptr<Cluster> cluster = 
+            std::make_unique<Cluster>(cid, MIN_FANIN, CROSSBAR_SIZE);
 
         clusters.push_back(std::move(cluster));
 

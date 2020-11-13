@@ -15,14 +15,14 @@ Argument::Argument(int argc, char **argv)
                  "Connection file")
         ("spike-file", po::value<std::string>(&spike_file)->required(),
                  "Spike file")
+        ("unroll-fanin", po::value<unsigned>(&unrolled_fanin)->required(),
+                   "Max fanin to unroll")
+        ("cluster-crossbar-size", po::value<unsigned>(&crossbar_size)->required(),
+                   "Crossbar size")
         ("unroll-ir-out", po::value<std::string>(&unrolled_ir_output),
                    "Unrolled IR output file")
         ("unroll-parent-out", po::value<std::string>(&unrolled_parent_output),
                    "Unrolled parent neurons output file")
-        ("unroll-fanin", po::value<unsigned>(&unrolled_fanin),
-                   "Max fanin to unroll")
-        ("cluster-crossbar-size", po::value<unsigned>(&crossbar_size),
-                   "Crossbar size")
         ("cluster-stats", po::value<std::string>(&cluster_stats),
                    "Clustering stats")
         ("cluster-ir-out", po::value<std::string>(&cluster_ir_output),

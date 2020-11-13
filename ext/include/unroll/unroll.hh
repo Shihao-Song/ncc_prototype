@@ -99,13 +99,12 @@ class Model
     std::vector<Neuron> snn;
     std::vector<Neuron> usnn; // unrolled SNN
 
-    unsigned max_fanin; // unrolling
+    const unsigned max_fanin; // unrolling
 
   public:
-    Model(const std::string&, const std::string&);
+    Model(const std::string&, const std::string&, const unsigned, const unsigned);
     ~Model();
 
-    void setFanin(unsigned _fanin) { max_fanin = _fanin; }
     void unroll();
 
     void outputUnrolledIR(const std::string&);

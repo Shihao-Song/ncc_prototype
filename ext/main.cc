@@ -9,14 +9,9 @@ int main(int argc, char **argv)
     Argument args(argc, argv);
 
     Model model(args.getConnFile(),
-                args.getSpikeFile());
-
-    if (auto fanin = args.getFanin();
-        fanin != EXT::Argument::INVALID)
-    {
-        model.setFanin(args.getFanin());
-        model.unroll();
-    }
+                args.getSpikeFile(),
+                args.getFanin(),
+                args.getCrossbarSize());
 
     if (auto &unrolled_ir = args.getUnrolledIROutputFile();
         unrolled_ir != "N/A")

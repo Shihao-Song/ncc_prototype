@@ -23,6 +23,7 @@ class Argument
     Argument(int argc, char **argv);
 
     auto getFanin() { return unrolled_fanin; }
+    auto getCrossbarSize() { return crossbar_size; }
     auto &getConnFile() { return connection_file; }
     auto &getSpikeFile() { return spike_file; }
     auto &getUnrolledIROutputFile() { return unrolled_ir_output; }

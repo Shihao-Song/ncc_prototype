@@ -13,7 +13,11 @@ namespace Unrolling
 typedef EXT::Clustering::Clusters Clusters;
 
 Model::Model(const std::string& connection_file_name,
-             const std::string& spike_file): clusters(new Clusters())
+             const std::string& spike_file,
+             const unsigned _fanin,
+             const unsigned _crossbar_size)
+    : max_fanin(_fanin)
+    , clusters(new Clusters(_fanin, _crossbar_size))
 {
     UINT64 max_neuron_id = extractMaxNeuronId(connection_file_name);
     // std::cout << "Max neuron ID: " << max_neuron_id << "\n";
@@ -39,6 +43,8 @@ Model::Model(const std::string& connection_file_name,
         }
     }
 
+    // unroll the model
+    unroll();
 }
 
 Model::~Model()
