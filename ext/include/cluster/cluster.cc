@@ -84,7 +84,7 @@ void Clusters::minClusters(std::vector<Neuron>& snn)
                                                 snn[cur_neuron_idx].getNeuronId()});
                 }
             }
-            std::sort(std::execution::par,
+            std::sort(// std::execution::par,
                       sorted_clusters.begin(),
                       sorted_clusters.end(),
                       [](auto &left, auto &right)
