@@ -64,6 +64,8 @@ class Clusters
         std::set<UINT64> connected_clusters_in;
 
         std::unordered_map<UINT64, UINT64> cluster_spikes_map;
+
+        unsigned num_synapses = 0;
       // public:
       public:
         Cluster(UINT64 _id, unsigned _fanin, unsigned _crossbar_size)
@@ -90,6 +92,8 @@ class Clusters
         std::set<UINT64> getConnectedClustersInCopy() { return connected_clusters_in; }
         void addConnectedClusterIn(UINT64 _cluster) { connected_clusters_in.insert(_cluster); }
 
+        void addSynapse() { num_synapses++; }
+        unsigned numSynapses() { return num_synapses; }
 
         void addNumSpikes(UINT64 cid, unsigned _spikes)
         {
@@ -188,8 +192,11 @@ class Clusters
 
             unsigned num_inputs = cluster->getInputsListRef().size();
             unsigned num_outputs = cluster->getOutputsListRef().size();
+            unsigned num_synapses = cluster->numSynapses();
 
-            file << cid << " " << num_inputs << " " << num_outputs << "\n";
+            file << cid << " " << num_inputs << " " 
+                               << num_outputs << " " 
+                               << num_synapses << "\n";
         }
 
         file.close();
@@ -315,6 +322,7 @@ class Clusters
                 neuron_status[new_neuron_id].
                     setNumOfSpikes(neuron_status[neuron_to_connect].numOfSpikes());
 
+                clusters[new_cid]->addSynapse();
                 clusters[new_cid]->addInput(neuron_to_connect);
                 neuron_status[neuron_to_connect].
                     addConnectedCluster(clusters[new_cid]->getClusterId());
@@ -383,6 +391,7 @@ class Clusters
             for (auto &input : cluster->getInputsListRef()) { std::cout << input << " "; }
             std::cout << "\nOutput Neurons: ";
             for (auto &output : cluster->getOutputsListRef()) { std::cout << output << " "; }
+            std::cout << "\nNumber of synapses: " << cluster->numSynapses();
             /*
             for (auto &output : cluster->getOutputsListRef())
             {

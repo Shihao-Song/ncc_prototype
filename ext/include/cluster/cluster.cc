@@ -128,7 +128,8 @@ void Clusters::minClusters(std::vector<Neuron>& snn)
             // debugPrint();
         }
     }
-    postClustering();
+    connectedComponents();
+    // postClustering();
     // debugPrint();
 }
 
@@ -290,6 +291,7 @@ void Clusters::packToCluster(unsigned total_inputs_can_be_packed,
             neuron_status[input_to_pack].
                 addConnectedCluster(clusters[cid]->getClusterId());
 
+            clusters[cid]->addSynapse();
             last_input_packed = input_to_pack;
             cur_packed++;
 	}
