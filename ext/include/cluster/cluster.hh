@@ -253,11 +253,12 @@ class Clusters
         std::vector<std::vector<UINT64>> cc;
         for (auto cid = 0; cid < clusters.size(); cid++)
         {
-            std::vector<UINT64> neighbors;
-            for (auto id : clusters[cid]->getConnectedClustersOutRef()) {neighbors.push_back(id);}
-            for (auto id : clusters[cid]->getConnectedClustersInRef()) {neighbors.push_back(id);}
+            // std::vector<UINT64> neighbors;
+            // for (auto id : clusters[cid]->getConnectedClustersOutRef()) {neighbors.push_back(id);}
+            // for (auto id : clusters[cid]->getConnectedClustersInRef()) {neighbors.push_back(id);}
 
-            if ((visited[cid] == false) && (neighbors.size() > 0))
+            if (visited[cid] == false)
+            // if ((visited[cid] == false) && (neighbors.size() > 0))
             {
                 iterativeDFS(cc, cid, visited);
             }
@@ -265,8 +266,10 @@ class Clusters
 
         if (cc.size() > 1)
         {
+            std::cout << "Number of disconnect graphs: " << cc.size() << "\n";
+
             // Connect all the disconnected graph
-            std::set<UINT64> neurons_to_connect;
+            std::list<UINT64> neurons_to_connect;
             for (auto &c : cc)
             {
                 for (auto ele : c)
@@ -276,34 +279,54 @@ class Clusters
                     {
                         auto &outputs = clusters[ele]->getOutputsListRef();
                         assert(outputs.size());
-                        neurons_to_connect.insert(*(outputs.begin()));
+                        neurons_to_connect.push_back(*(outputs.begin()));
                         // std::cout << ele << "\n";
                         break;
                     }
                 }
             }
 
-            auto new_cid = addCluster();
+            auto new_cid = INVALID_ID;
             unsigned num_new_neurons = 0;
-            for (auto neuron_to_connect : neurons_to_connect)
+            while (true)
+            // for (auto neuron_to_connect : neurons_to_connect)
             {
-                if (num_new_neurons == CROSSBAR_SIZE)
+                if (neurons_to_connect.size() == 0) { break; }
+
+                if (num_new_neurons % CROSSBAR_SIZE == 0)
                 {
+                    if (num_new_neurons > 0)
+                    {
+                        // Connect previous cid
+                        auto &outputs = clusters[new_cid]->getOutputsListRef();
+                        assert(outputs.size());
+                        neurons_to_connect.push_front(*(outputs.begin()));
+                        // std::cout << neuron_status[*(outputs.begin())].numOfSpikes() << "\n";
+                    }
+
                     new_cid = addCluster();
                 }
 
+                auto neuron_to_connect = *(neurons_to_connect.begin());
+                num_new_neurons++;
+
                 UINT64 new_neuron_id = neuron_status.size();
                 neuron_status.push_back(Neuron_Status());
+                neuron_status[new_neuron_id].
+                    setNumOfSpikes(neuron_status[neuron_to_connect].numOfSpikes());
 
                 clusters[new_cid]->addInput(neuron_to_connect);
                 neuron_status[neuron_to_connect].
                     addConnectedCluster(clusters[new_cid]->getClusterId());
                 clusters[new_cid]->addOutput(new_neuron_id);
+
+                neurons_to_connect.pop_front();
             }
 
             postClustering();
         }
 
+        // Calculate inter-cluster spikes
         for (auto &cluster : clusters)
         {
             for (auto &output : cluster->getOutputsListRef())
@@ -316,6 +339,7 @@ class Clusters
         }
     }
 
+    // Better to iterative here, recursive can crash when the graph is large,
     void iterativeDFS(std::vector<std::vector<UINT64>> &cc,
                       UINT64 cid,
                       std::vector<bool> &visited)
@@ -349,43 +373,6 @@ class Clusters
 	cc.push_back(c);
     }
 
-    /*
-    void isConnected()
-    {
-        std::cout << "---------------------------------------\n";
-        std::vector<bool> visited(clusters.size(), false);
-
-        DFS(0,visited);
-
-        std::cout << "Non-connected clusters: ";
-        std::vector<UINT64> unconnected;
-        for (auto cid = 0; cid < visited.size(); cid++)
-        {
-            if (!visited[cid]) { std::cout << cid << " "; }
-        }
-        std::cout << "\n";
-    }
-
-    void DFS(UINT64 cid, std::vector<bool> &visited)
-    {
-        visited[cid] = true;
-
-        std::vector<UINT64> neighbors;
-        for (auto id : clusters[cid]->getConnectedClustersOutRef()) {neighbors.push_back(id);}
-        for (auto id : clusters[cid]->getConnectedClustersInRef()) {neighbors.push_back(id);}
-
-        // for (auto id : neighbors) { std::cout << id << "\n"; }
-
-        for (auto i = 0; i < neighbors.size(); i++)
-        {
-            UINT64 neighbor = neighbors[i];
-            if (visited[neighbor] == false)
-            {
-                DFS(neighbor,visited);
-            }
-        }
-    }
-    */
     void debugPrint()
     {
         std::cout << "---------------------------------------\n";
