@@ -6,6 +6,7 @@
 #include <list>
 #include <memory>
 #include <set>
+#include <stack>
 #include <unordered_map>
 #include <vector>
 
@@ -233,7 +234,7 @@ class Clusters
             {
                 for (auto &conn_cluster : neuron_status[output].getConnectedClustersRef())
                 {
-                    cluster->addNumSpikes(conn_cluster, neuron_status[output].numOfSpikes());
+                    // cluster->addNumSpikes(conn_cluster, neuron_status[output].numOfSpikes());
                     cluster->addConnectedClusterOut(conn_cluster);
                     clusters[conn_cluster]->addConnectedClusterIn(cluster->getClusterId());
                 }
@@ -242,6 +243,112 @@ class Clusters
     }
 
     // The following codes should better be standalone.
+    void connectedComponents()
+    {
+        postClustering();
+
+        std::cout << "---------------------------------------\n";
+        std::vector<bool> visited(clusters.size(), false);
+
+        std::vector<std::vector<UINT64>> cc;
+        for (auto cid = 0; cid < clusters.size(); cid++)
+        {
+            std::vector<UINT64> neighbors;
+            for (auto id : clusters[cid]->getConnectedClustersOutRef()) {neighbors.push_back(id);}
+            for (auto id : clusters[cid]->getConnectedClustersInRef()) {neighbors.push_back(id);}
+
+            if ((visited[cid] == false) && (neighbors.size() > 0))
+            {
+                iterativeDFS(cc, cid, visited);
+            }
+        }
+
+        if (cc.size() > 1)
+        {
+            // Connect all the disconnected graph
+            std::set<UINT64> neurons_to_connect;
+            for (auto &c : cc)
+            {
+                for (auto ele : c)
+                {
+                    auto &conn_clusters_out = clusters[ele]->getConnectedClustersOutRef();
+                    if (conn_clusters_out.size() == 0)
+                    {
+                        auto &outputs = clusters[ele]->getOutputsListRef();
+                        assert(outputs.size());
+                        neurons_to_connect.insert(*(outputs.begin()));
+                        // std::cout << ele << "\n";
+                        break;
+                    }
+                }
+            }
+
+            auto new_cid = addCluster();
+            unsigned num_new_neurons = 0;
+            for (auto neuron_to_connect : neurons_to_connect)
+            {
+                if (num_new_neurons == CROSSBAR_SIZE)
+                {
+                    new_cid = addCluster();
+                }
+
+                UINT64 new_neuron_id = neuron_status.size();
+                neuron_status.push_back(Neuron_Status());
+
+                clusters[new_cid]->addInput(neuron_to_connect);
+                neuron_status[neuron_to_connect].
+                    addConnectedCluster(clusters[new_cid]->getClusterId());
+                clusters[new_cid]->addOutput(new_neuron_id);
+            }
+
+            postClustering();
+        }
+
+        for (auto &cluster : clusters)
+        {
+            for (auto &output : cluster->getOutputsListRef())
+            {
+                for (auto &conn_cluster : neuron_status[output].getConnectedClustersRef())
+                {
+                    cluster->addNumSpikes(conn_cluster, neuron_status[output].numOfSpikes());
+                }
+            }
+        }
+    }
+
+    void iterativeDFS(std::vector<std::vector<UINT64>> &cc,
+                      UINT64 cid,
+                      std::vector<bool> &visited)
+    {
+        std::stack<UINT64> s;
+
+        s.push(cid);
+
+        std::vector<UINT64> c;
+        while (true)
+        {
+            if (s.size() == 0) { break; }
+            
+            auto v = s.top();
+            s.pop();
+            if (visited[v]) { continue; }
+
+            visited[v] = true;
+            c.push_back(v);
+
+            std::vector<UINT64> neighbors;
+            for (auto id : clusters[v]->getConnectedClustersOutRef()) {neighbors.push_back(id);}
+            for (auto id : clusters[v]->getConnectedClustersInRef()) {neighbors.push_back(id);}
+
+            for (auto neighbor : neighbors)
+            {
+                if (!visited[neighbor]) { s.push(neighbor); }
+            }
+        }
+
+	cc.push_back(c);
+    }
+
     /*
     void isConnected()
     {

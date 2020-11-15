@@ -239,7 +239,7 @@ void Clusters::random(std::vector<Neuron>& snn)
             // debugPrint();
         }
     }
-    postClustering();
+    connectedComponents();
     // debugPrint();
 }
 
