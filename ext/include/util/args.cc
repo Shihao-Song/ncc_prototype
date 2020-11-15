@@ -20,7 +20,7 @@ Argument::Argument(int argc, char **argv)
         ("cluster-crossbar-size", po::value<unsigned>(&crossbar_size),
                    "Crossbar size")
         ("clustering-algo", po::value<std::string>(&clustering_algo),
-            "Clustering algorithms: random, min-clusters")
+            "Clustering algorithms: random, min-clusters, min-communication")
         ("unroll-ir-out", po::value<std::string>(&unrolled_ir_output),
                    "Unrolled IR output file")
         ("unroll-parent-out", po::value<std::string>(&unrolled_parent_output),

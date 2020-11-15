@@ -59,7 +59,8 @@ class Clusters
         std::set<UINT64> inputs;
         std::set<UINT64> outputs;
 
-        std::set<UINT64> connected_clusters;
+        std::set<UINT64> connected_clusters_out;
+        std::set<UINT64> connected_clusters_in;
 
         std::unordered_map<UINT64, UINT64> cluster_spikes_map;
       // public:
@@ -80,9 +81,14 @@ class Clusters
         std::set<UINT64> &getOutputsListRef() { return outputs; }
         std::set<UINT64> getOutputsListCopy() { return outputs; }
 
-        std::set<UINT64> &getConnectedClustersRef() { return connected_clusters; }
-        std::set<UINT64> getConnectedClustersCopy() { return connected_clusters; }
-        void addConnectedCluster(UINT64 _cluster) { connected_clusters.insert(_cluster); }
+        std::set<UINT64> &getConnectedClustersOutRef() { return connected_clusters_out; }
+        std::set<UINT64> getConnectedClustersOutCopy() { return connected_clusters_out; }
+        void addConnectedClusterOut(UINT64 _cluster) { connected_clusters_out.insert(_cluster); }
+
+        std::set<UINT64> &getConnectedClustersInRef() { return connected_clusters_in; }
+        std::set<UINT64> getConnectedClustersInCopy() { return connected_clusters_in; }
+        void addConnectedClusterIn(UINT64 _cluster) { connected_clusters_in.insert(_cluster); }
+
 
         void addNumSpikes(UINT64 cid, unsigned _spikes)
         {
@@ -140,6 +146,10 @@ class Clusters
         {
             minClusters(snn);
         }
+        else if (mode == "random")
+        {
+            random(snn);
+        }
         else
         {
             std::cerr << "---------------------------------------\n";
@@ -157,7 +167,7 @@ class Clusters
         {
             UINT64 cid = cluster->getClusterId();
 
-            for (auto &conn_cluster : cluster->getConnectedClustersRef())
+            for (auto &conn_cluster : cluster->getConnectedClustersOutRef())
             {
                 file << cid << " "
                      << conn_cluster << " "
@@ -186,6 +196,8 @@ class Clusters
 
   protected: // Helper function
     void minClusters(std::vector<Neuron>&);
+    // void minClustersV2(std::vector<Neuron>&);
+    void random(std::vector<Neuron>&);
 
     UINT64 addCluster()
     {
@@ -203,7 +215,11 @@ class Clusters
 
     std::vector<Neuron_Status> neuron_status;
 
-    void packToCluster(UINT64 cur_neuron_idx,
+    unsigned numCanBePacked(UINT64 cid,
+                            std::list<UINT64> &non_unrolled_inputs);
+
+    void packToCluster(unsigned total_inputs_can_be_packed,
+                       UINT64 cur_neuron_idx,
                        UINT64 cid,
                        std::unordered_map<UINT64, UINT64> &input_to_output_map,
                        std::list<UINT64> &non_unrolled_inputs);
@@ -218,12 +234,51 @@ class Clusters
                 for (auto &conn_cluster : neuron_status[output].getConnectedClustersRef())
                 {
                     cluster->addNumSpikes(conn_cluster, neuron_status[output].numOfSpikes());
-                    cluster->addConnectedCluster(conn_cluster);
+                    cluster->addConnectedClusterOut(conn_cluster);
+                    clusters[conn_cluster]->addConnectedClusterIn(cluster->getClusterId());
                 }
             }
         }
     }
 
+    // The following codes should better be standalone.
+    /*
+    void isConnected()
+    {
+        std::cout << "---------------------------------------\n";
+        std::vector<bool> visited(clusters.size(), false);
+
+        DFS(0,visited);
+
+        std::cout << "Non-connected clusters: ";
+        std::vector<UINT64> unconnected;
+        for (auto cid = 0; cid < visited.size(); cid++)
+        {
+            if (!visited[cid]) { std::cout << cid << " "; }
+        }
+        std::cout << "\n";
+    }
+
+    void DFS(UINT64 cid, std::vector<bool> &visited)
+    {
+        visited[cid] = true;
+
+        std::vector<UINT64> neighbors;
+        for (auto id : clusters[cid]->getConnectedClustersOutRef()) {neighbors.push_back(id);}
+        for (auto id : clusters[cid]->getConnectedClustersInRef()) {neighbors.push_back(id);}
+
+        // for (auto id : neighbors) { std::cout << id << "\n"; }
+
+        for (auto i = 0; i < neighbors.size(); i++)
+        {
+            UINT64 neighbor = neighbors[i];
+            if (visited[neighbor] == false)
+            {
+                DFS(neighbor,visited);
+            }
+        }
+    }
+    */
     void debugPrint()
     {
         std::cout << "---------------------------------------\n";
@@ -245,7 +300,7 @@ class Clusters
             }
             */
             std::cout << "\nConnected Clusters: ";
-            for (auto &conn_cluster : cluster->getConnectedClustersRef())
+            for (auto &conn_cluster : cluster->getConnectedClustersOutRef())
             {
                 std::cout << conn_cluster << "(";
                 std::cout << cluster->numOfSpikes(conn_cluster) << "), ";
