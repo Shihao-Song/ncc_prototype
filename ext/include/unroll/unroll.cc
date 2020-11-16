@@ -209,7 +209,7 @@ void Model::unroll()
                 {
                     usnn.emplace_back(cur_unrolling_neuron_id);
 
-                    unsigned total_spikes = 0;
+                    UINT64 total_spikes = 0;
 
                     for (auto i = 0; i < max_fanin; i++)
                     {
@@ -233,7 +233,7 @@ void Model::unroll()
                     usnn[usnn[idx].getNeuronId()].getInputNeuronList().push_back(
                         prev_unrolling_neuron_id);
 
-                    unsigned total_spikes = usnn[prev_unrolling_neuron_id].numOfSpikes();
+                    UINT64 total_spikes = usnn[prev_unrolling_neuron_id].numOfSpikes();
 
                     for (auto i = max_fanin + (inter_neu_idx - 1) * (max_fanin - 1);
                               i < num_inputs;
@@ -258,7 +258,7 @@ void Model::unroll()
                     usnn[cur_unrolling_neuron_id].getInputNeuronList().push_back(
                         prev_unrolling_neuron_id);
 
-                    unsigned total_spikes = usnn[prev_unrolling_neuron_id].numOfSpikes();
+                    UINT64 total_spikes = usnn[prev_unrolling_neuron_id].numOfSpikes();
                     
                     for (auto i = max_fanin + (inter_neu_idx - 1) * (max_fanin - 1); 
                               i < max_fanin + inter_neu_idx * (max_fanin - 1);

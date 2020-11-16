@@ -3,7 +3,7 @@ SOURCE  += $(shell find include/ -name "*.cc")
 CC      := g++
 FLAGS   := -O3 -std=c++17 -w -I include
 LD      := -lboost_program_options -ltbb
-TARGET  := ext
+TARGET  := ext-tmp
 OUT	:= out
 
 all: $(TARGET)
@@ -13,4 +13,3 @@ $(TARGET): $(SOURCE)
 
 clean:
 	rm -f $(TARGET)
-	rm -f $(OUT)/*

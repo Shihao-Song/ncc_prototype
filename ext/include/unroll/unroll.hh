@@ -22,7 +22,7 @@ class Neuron
     std::vector<UINT64> input_neurons;
     std::vector<UINT64> output_neurons;
 
-    unsigned num_spikes = 0;
+    UINT64 num_spikes = 0;
 
     UINT64 parent = INVALID_ID; // Which neuron it unrolls from
 
@@ -56,8 +56,8 @@ class Neuron
         output_neurons = _list;
     }
 
-    void addNumSpikesFromOneInput(unsigned _spike) { num_spikes += _spike; }
-    void setNumSpikes(unsigned _num_spikes) { num_spikes = _num_spikes; }
+    void addNumSpikesFromOneInput(UINT64 _spike) { num_spikes += _spike; }
+    void setNumSpikes(UINT64 _num_spikes) { num_spikes = _num_spikes; }
     void resetNumSpikes() { num_spikes = 0; }
 
     void setNeuronId(UINT64 _id) { neuron_id = _id; }
@@ -69,7 +69,7 @@ class Neuron
     unsigned numInputNeurons() { return input_neurons.size(); }
     unsigned numOutputNeurons() { return output_neurons.size(); }
 
-    unsigned numOfSpikes() { return num_spikes; }
+    UINT64 numOfSpikes() { return num_spikes; }
 
     void setParentId(UINT64 _id) { parent = _id; }
     UINT64 getParentId() { return parent; }

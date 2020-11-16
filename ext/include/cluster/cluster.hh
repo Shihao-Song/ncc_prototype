@@ -24,15 +24,21 @@ const UINT64 INVALID_ID = (UINT64) - 1;
 class Neuron_Status
 {
   protected:
-    unsigned num_spikes;
+    UINT64 num_spikes;
 
     std::set<UINT64> connected_clusters;
+
+  protected:
+    UINT64 id;
 
   public:
     Neuron_Status() {}
 
-    void setNumOfSpikes(unsigned _spikes) { num_spikes = _spikes; }
-    unsigned numOfSpikes() { return num_spikes; }
+    void setNeuronId(UINT64 _id) { id = _id; }
+    UINT64 getNeuronId() { return id; }
+
+    void setNumOfSpikes(UINT64 _spikes) { num_spikes = _spikes; }
+    UINT64 numOfSpikes() { return num_spikes; }
 
     std::set<UINT64> &getConnectedClustersRef() { return connected_clusters; }
     std::set<UINT64> getConnectedClustersCopy() { return connected_clusters; }
@@ -96,7 +102,7 @@ class Clusters
         void addSynapse() { num_synapses++; }
         unsigned numSynapses() { return num_synapses; }
 
-        void addNumSpikes(UINT64 cid, unsigned _spikes)
+        void addNumSpikes(UINT64 cid, UINT64 _spikes)
         {
             // std::cout << "\nAdding: " << cid << " " << _spikes << "\n";
 
@@ -157,6 +163,10 @@ class Clusters
         {
             random(snn);
         }
+        else if (mode == "min-comm")
+        {
+            minComm(snn);
+        }
         else
         {
             std::cerr << "---------------------------------------\n";
@@ -198,10 +208,20 @@ class Clusters
             unsigned num_inputs = cluster->getInputsListRef().size();
             unsigned num_outputs = cluster->getOutputsListRef().size();
             unsigned num_synapses = cluster->numSynapses();
+            unsigned num_conns = 0;
+            UINT64 total_spikes = 0;
+
+            for (auto &conn_cluster : cluster->getConnectedClustersOutRef())
+            {
+                num_conns++;
+                total_spikes += cluster->numOfSpikes(conn_cluster);
+            }
 
             file << cid << " " << num_inputs << " " 
                                << num_outputs << " " 
-                               << num_synapses << "\n";
+                               << num_synapses << " "
+                               << num_conns << " "
+                               << total_spikes << "\n";
         }
 
         file.close();
@@ -211,6 +231,7 @@ class Clusters
     void minClusters(std::vector<Neuron>&);
     // void minClustersV2(std::vector<Neuron>&);
     void random(std::vector<Neuron>&);
+    void minComm(std::vector<Neuron>&);
 
     UINT64 addCluster()
     {

@@ -22,7 +22,7 @@ void Clusters::minClusters(std::vector<Neuron>& snn)
     for (auto &neuron : snn)
     {
         UINT64 id = neuron.getNeuronId();
-        unsigned spikes = neuron.numOfSpikes();
+        UINT64 spikes = neuron.numOfSpikes();
 
         neuron_status[id].setNumOfSpikes(spikes);
     }
@@ -133,6 +133,106 @@ void Clusters::minClusters(std::vector<Neuron>& snn)
     // debugPrint();
 }
 
+// The goal is to minimize communications
+void Clusters::minComm(std::vector<Neuron>& snn)
+{
+    std::cout << "---------------------------------------\n";
+    std::cout << "Clustering Step - Minimize Communication\n";
+    std::cout << "Minimum fanin: " << MIN_FANIN << "\n";
+    std::cout << "Crossbar size: " << CROSSBAR_SIZE << "\n";
+    std::cout << "---------------------------------------\n";
+
+    // Record the clustering status for each neuron
+    neuron_status.resize(snn.size());
+    for (auto &neuron : snn)
+    {
+        UINT64 id = neuron.getNeuronId();
+        UINT64 spikes = neuron.numOfSpikes();
+
+        neuron_status[id].setNumOfSpikes(spikes);
+    }
+
+    static std::default_random_engine e{};
+    addCluster();
+
+    // Sorting neurons
+    std::vector<Neuron_Status> sorted_neurons;
+    for (auto &neuron : snn)
+    {
+        Neuron_Status tmp;
+
+        UINT64 id = neuron.getNeuronId();
+        UINT64 spikes = neuron.numOfSpikes();
+
+        tmp.setNeuronId(id);
+        tmp.setNumOfSpikes(spikes);
+
+        sorted_neurons.push_back(tmp);
+    }
+
+    std::sort(// std::execution::par,
+              sorted_neurons.begin(),
+              sorted_neurons.end(),
+              [](auto &left, auto &right)
+              {
+                  return left.numOfSpikes() > right.numOfSpikes();
+              });
+
+    for (auto &neuron : sorted_neurons) 
+    {
+        auto cur_neuron_idx = neuron.getNeuronId();
+
+        if (snn[cur_neuron_idx].numInputNeurons())
+        {
+            std::list<UINT64> non_unrolled_inputs;
+            // Input neuron -> Output neuron mapping
+            std::unordered_map<UINT64, UINT64> input_to_output_map;
+
+            auto &inputs_to_pack = snn[cur_neuron_idx].getInputNeuronList();
+            for (auto i = 0; i < inputs_to_pack.size(); i++)
+            {
+                auto input_to_pack = inputs_to_pack[i];
+                if (i == CROSSBAR_SIZE) { exit(0); } // Only for experimental run
+
+                non_unrolled_inputs.push_back(input_to_pack);
+                input_to_output_map.insert({input_to_pack,
+                                            snn[cur_neuron_idx].getNeuronId()});
+            }
+    
+            while (true)
+            {
+                if (non_unrolled_inputs.size() == 0) { break; }
+                // Choose a random cluster
+                std::uniform_int_distribution<> r_index_gen(0, clusters.size() - 1);
+                auto r_index = r_index_gen(e);
+                unsigned num_to_pack = numCanBePacked(r_index,
+                                                      non_unrolled_inputs);
+                packToCluster(num_to_pack,
+                              snn[cur_neuron_idx].getNeuronId(),
+                              r_index,
+                              input_to_output_map,
+                              non_unrolled_inputs);
+
+                // Create a new cluster it cannot be fully mapped		
+                if (non_unrolled_inputs.size() == 0) { break; }
+
+                auto cid = addCluster();
+                num_to_pack = numCanBePacked(cid,
+                                             non_unrolled_inputs);
+                packToCluster(num_to_pack,
+                              snn[cur_neuron_idx].getNeuronId(),
+                              cid,
+                              input_to_output_map,
+                              non_unrolled_inputs);
+            }
+            // std::cout << "Mapped neuron id: " << snn[cur_neuron_idx].getNeuronId() << "\n";
+            // debugPrint();
+        }
+    }
+    connectedComponents();
+    // debugPrint();
+}
+
 // The goal is to minimize the number of clusters
 void Clusters::random(std::vector<Neuron>& snn)
 {
@@ -147,7 +247,7 @@ void Clusters::random(std::vector<Neuron>& snn)
     for (auto &neuron : snn)
     {
         UINT64 id = neuron.getNeuronId();
-        unsigned spikes = neuron.numOfSpikes();
+        UINT64 spikes = neuron.numOfSpikes();
 
         neuron_status[id].setNumOfSpikes(spikes);
     }
