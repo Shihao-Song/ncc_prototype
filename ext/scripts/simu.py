@@ -18,4 +18,6 @@ if __name__ == "__main__":
         ir_file = "out/" + network + "." + c_tech + ".ir.txt"
         stat_file = "out/" + network + "." + c_tech + ".stats.txt"
 
+        print (network)
         subprocess.call(["./ext", "--conn-file", conn_file, "--spike-file", spike_file, "--unroll-fanin", "2", "--cluster-crossbar-size", c_size, "--clustering-algo", c_tech, "--cluster-stats", stat_file, "--cluster-ir-out", ir_file])
+        print("")

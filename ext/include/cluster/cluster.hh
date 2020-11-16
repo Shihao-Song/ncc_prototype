@@ -2,6 +2,7 @@
 #define __CLUSTERING_HH__
 
 #include <algorithm>
+#include <chrono>
 #include <cstdint>
 #include <list>
 #include <memory>
@@ -147,6 +148,7 @@ class Clusters
 
     void clustering(std::vector<Neuron> &snn, std::string &mode)
     {
+        auto t1 = std::chrono::high_resolution_clock::now();
         if (mode == "min-clusters")
         {
             minClusters(snn);
@@ -161,6 +163,9 @@ class Clusters
             std::cerr << "Error: unsupported clustering algorithm\n";
             return;
         }
+        auto t2 = std::chrono::high_resolution_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::microseconds>(t2-t1).count();
+        std::cout << "Compilation time: " << duration << " microseconds\n";
     }
 
     void printClusterIR(std::string &_out)

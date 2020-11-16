@@ -37,7 +37,7 @@ void Clusters::minClusters(std::vector<Neuron>& snn)
 
         if (snn[cur_neuron_idx].numInputNeurons()) 
         {
-            std::cout << "\nMapping neuron id: " << snn[cur_neuron_idx].getNeuronId() << "\n";
+            // std::cout << "\nMapping neuron id: " << snn[cur_neuron_idx].getNeuronId() << "\n";
             // All the input neurons before unrolling
             std::list<UINT64> non_unrolled_inputs;
             // Input neuron -> Output neuron mapping
@@ -162,7 +162,7 @@ void Clusters::random(std::vector<Neuron>& snn)
 
         if (snn[cur_neuron_idx].numInputNeurons()) 
         {
-            std::cout << "\nMapping neuron id: " << snn[cur_neuron_idx].getNeuronId() << "\n";
+            // std::cout << "\nMapping neuron id: " << snn[cur_neuron_idx].getNeuronId() << "\n";
             // All the input neurons before unrolling
             std::list<UINT64> non_unrolled_inputs;
             // Input neuron -> Output neuron mapping

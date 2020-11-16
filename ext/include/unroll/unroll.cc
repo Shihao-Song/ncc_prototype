@@ -180,8 +180,8 @@ void Model::unroll()
         // Check if the number of inputs exceed max_fanin
         if (input_neurons_copy.size() > max_fanin)
         {
-            std::cout << "\nUnrolling neuron id: "
-                      << usnn[idx].getNeuronId() << "\n";
+            // std::cout << "\nUnrolling neuron id: "
+            //           << usnn[idx].getNeuronId() << "\n";
 
             // Step one, reset the output neuron of all the input neurons
             for (auto &input_neuron : input_neurons_copy)
