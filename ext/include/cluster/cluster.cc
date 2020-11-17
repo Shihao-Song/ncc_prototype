@@ -380,7 +380,7 @@ void Clusters::random(std::vector<Neuron>& snn)
         }
     }
     connectedComponents();
-    //debugPrint();
+    // debugPrint();
 }
 
 unsigned Clusters::numCanBePacked(UINT64 cid,

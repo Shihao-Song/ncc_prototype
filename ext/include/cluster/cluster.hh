@@ -70,7 +70,8 @@ class Clusters
         std::set<UINT64> connected_clusters_out;
         std::set<UINT64> connected_clusters_in;
 
-        std::unordered_map<UINT64, boost::multiprecision::cpp_int> cluster_spikes_map;
+        boost::multiprecision::cpp_int in_coming_spikes = 0;
+        std::unordered_map<UINT64, boost::multiprecision::cpp_int> cluster_spikes_out_map;
 
         unsigned num_synapses = 0;
       // public:
@@ -102,31 +103,47 @@ class Clusters
         void addSynapse() { num_synapses++; }
         unsigned numSynapses() { return num_synapses; }
 
-        void addNumSpikes(UINT64 cid, boost::multiprecision::cpp_int _spikes)
+        void addNumSpikesIn(boost::multiprecision::cpp_int _spikes)
+        {
+            boost::multiprecision::cpp_int ori = in_coming_spikes;
+            in_coming_spikes += _spikes;
+            if (in_coming_spikes < ori)
+            {
+                std::cerr << "addNumSpikesIn: overflow detected." << std::endl;
+                exit(0);
+            }
+        }
+
+        void addNumSpikesOut(UINT64 cid, boost::multiprecision::cpp_int _spikes)
         {
             // std::cout << "\nAdding: " << cid << " " << _spikes << "\n";
 
-            if (auto iter = cluster_spikes_map.find(cid);
-                     iter != cluster_spikes_map.end())
+            if (auto iter = cluster_spikes_out_map.find(cid);
+                     iter != cluster_spikes_out_map.end())
             {
                 boost::multiprecision::cpp_int ori = iter->second;
                 iter->second += _spikes;
                 if (iter->second < ori)
                 {
-                    std::cerr << "addNumSpikes: overflow detected." << std::endl;
+                    std::cerr << "addNumSpikesOut: overflow detected." << std::endl;
                     exit(0);
                 }
             }
             else
             {
-                cluster_spikes_map.insert({cid, _spikes});
+                cluster_spikes_out_map.insert({cid, _spikes});
             }
 	}
 
-        boost::multiprecision::cpp_int numOfSpikes(UINT64 cid)
+        boost::multiprecision::cpp_int numOfSpikesIn()
         {
-            auto iter = cluster_spikes_map.find(cid);
-            assert(iter != cluster_spikes_map.end());
+            return in_coming_spikes;
+        }
+
+        boost::multiprecision::cpp_int numOfSpikesOut(UINT64 cid)
+        {
+            auto iter = cluster_spikes_out_map.find(cid);
+            assert(iter != cluster_spikes_out_map.end());
             return iter->second;
         }
 
@@ -197,7 +214,7 @@ class Clusters
             {
                 file << cid << " "
                      << conn_cluster << " "
-                     << cluster->numOfSpikes(conn_cluster) << "\n";
+                     << cluster->numOfSpikesOut(conn_cluster) << "\n";
             }
         }
         file.close();
@@ -215,25 +232,28 @@ class Clusters
             unsigned num_outputs = cluster->getOutputsListRef().size();
             unsigned num_synapses = cluster->numSynapses();
             unsigned num_conns = 0;
-            boost::multiprecision::cpp_int total_spikes = 0;
+            boost::multiprecision::cpp_int total_spikes_in = cluster->numOfSpikesIn();
+            boost::multiprecision::cpp_int total_spikes_out = 0;
 
             for (auto &conn_cluster : cluster->getConnectedClustersOutRef())
             {
-                boost::multiprecision::cpp_int ori = total_spikes;
+                boost::multiprecision::cpp_int ori = total_spikes_out;
                 num_conns++;
-                total_spikes += cluster->numOfSpikes(conn_cluster);
-                if (total_spikes < ori)
+                total_spikes_out += cluster->numOfSpikesOut(conn_cluster);
+                if (total_spikes_out < ori)
                 {
                     std::cerr << "printClusterStats: overflow detected." << std::endl;
                     exit(0);
                 }
             }
 
-            file << cid << " " << num_inputs << " " 
-                               << num_outputs << " " 
-                               << num_synapses << " "
-                               << num_conns << " "
-                               << total_spikes << "\n";
+            file << cid << " " 
+                 // << num_inputs << " " 
+                 // << num_outputs << " " 
+                 // << num_synapses << " "
+                 // << num_conns << " "
+                 << total_spikes_in << " "
+                 << total_spikes_out << "\n";
         }
 
         file.close();
@@ -279,7 +299,6 @@ class Clusters
             {
                 for (auto &conn_cluster : neuron_status[output].getConnectedClustersRef())
                 {
-                    // cluster->addNumSpikes(conn_cluster, neuron_status[output].numOfSpikes());
                     cluster->addConnectedClusterOut(conn_cluster);
                     clusters[conn_cluster]->addConnectedClusterIn(cluster->getClusterId());
                 }
@@ -346,7 +365,6 @@ class Clusters
                         auto &outputs = clusters[new_cid]->getOutputsListRef();
                         assert(outputs.size());
                         neurons_to_connect.push_front(*(outputs.begin()));
-                        // std::cout << neuron_status[*(outputs.begin())].numOfSpikes() << "\n";
                     }
 
                     new_cid = addCluster();
@@ -360,7 +378,7 @@ class Clusters
                 neuron_status[new_neuron_id].
                     setNumOfSpikes(neuron_status[neuron_to_connect].numOfSpikes());
 
-                clusters[new_cid]->addSynapse();
+                // clusters[new_cid]->addSynapse();
                 clusters[new_cid]->addInput(neuron_to_connect);
                 neuron_status[neuron_to_connect].
                     addConnectedCluster(clusters[new_cid]->getClusterId());
@@ -379,7 +397,8 @@ class Clusters
             {
                 for (auto &conn_cluster : neuron_status[output].getConnectedClustersRef())
                 {
-                    cluster->addNumSpikes(conn_cluster, neuron_status[output].numOfSpikes());
+                    cluster->addNumSpikesOut(conn_cluster, neuron_status[output].numOfSpikes());
+                    clusters[conn_cluster]->addNumSpikesIn(neuron_status[output].numOfSpikes());
                 }
             }
         }
@@ -430,21 +449,11 @@ class Clusters
             std::cout << "\nOutput Neurons: ";
             for (auto &output : cluster->getOutputsListRef()) { std::cout << output << " "; }
             std::cout << "\nNumber of synapses: " << cluster->numSynapses();
-            /*
-            for (auto &output : cluster->getOutputsListRef())
-            {
-                for (auto &conn_cluster : neuron_status[output].getConnectedClustersRef())
-                {
-                    cluster->addNumSpikes(conn_cluster, neuron_status[output].numOfSpikes());
-                    cluster->addConnectedCluster(conn_cluster);
-                }
-            }
-            */
             std::cout << "\nConnected Clusters: ";
             for (auto &conn_cluster : cluster->getConnectedClustersOutRef())
             {
                 std::cout << conn_cluster << "(";
-                std::cout << cluster->numOfSpikes(conn_cluster) << "), ";
+                std::cout << cluster->numOfSpikesOut(conn_cluster) << "), ";
             }
             std::cout << "\n\n";
         }
