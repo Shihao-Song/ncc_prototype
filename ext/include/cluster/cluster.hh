@@ -24,7 +24,7 @@ const UINT64 INVALID_ID = (UINT64) - 1;
 class Neuron_Status
 {
   protected:
-    UINT64 num_spikes;
+    boost::multiprecision::cpp_int num_spikes;
 
     std::set<UINT64> connected_clusters;
 
@@ -37,8 +37,8 @@ class Neuron_Status
     void setNeuronId(UINT64 _id) { id = _id; }
     UINT64 getNeuronId() { return id; }
 
-    void setNumOfSpikes(UINT64 _spikes) { num_spikes = _spikes; }
-    UINT64 numOfSpikes() { return num_spikes; }
+    void setNumOfSpikes(boost::multiprecision::cpp_int _spikes) { num_spikes = _spikes; }
+    boost::multiprecision::cpp_int numOfSpikes() { return num_spikes; }
 
     std::set<UINT64> &getConnectedClustersRef() { return connected_clusters; }
     std::set<UINT64> getConnectedClustersCopy() { return connected_clusters; }
@@ -70,7 +70,7 @@ class Clusters
         std::set<UINT64> connected_clusters_out;
         std::set<UINT64> connected_clusters_in;
 
-        std::unordered_map<UINT64, UINT64> cluster_spikes_map;
+        std::unordered_map<UINT64, boost::multiprecision::cpp_int> cluster_spikes_map;
 
         unsigned num_synapses = 0;
       // public:
@@ -102,14 +102,20 @@ class Clusters
         void addSynapse() { num_synapses++; }
         unsigned numSynapses() { return num_synapses; }
 
-        void addNumSpikes(UINT64 cid, UINT64 _spikes)
+        void addNumSpikes(UINT64 cid, boost::multiprecision::cpp_int _spikes)
         {
             // std::cout << "\nAdding: " << cid << " " << _spikes << "\n";
 
             if (auto iter = cluster_spikes_map.find(cid);
                      iter != cluster_spikes_map.end())
             {
+                boost::multiprecision::cpp_int ori = iter->second;
                 iter->second += _spikes;
+                if (iter->second < ori)
+                {
+                    std::cerr << "addNumSpikes: overflow detected." << std::endl;
+                    exit(0);
+                }
             }
             else
             {
@@ -117,7 +123,7 @@ class Clusters
             }
 	}
 
-        UINT64 numOfSpikes(UINT64 cid)
+        boost::multiprecision::cpp_int numOfSpikes(UINT64 cid)
         {
             auto iter = cluster_spikes_map.find(cid);
             assert(iter != cluster_spikes_map.end());
@@ -209,12 +215,18 @@ class Clusters
             unsigned num_outputs = cluster->getOutputsListRef().size();
             unsigned num_synapses = cluster->numSynapses();
             unsigned num_conns = 0;
-            UINT64 total_spikes = 0;
+            boost::multiprecision::cpp_int total_spikes = 0;
 
             for (auto &conn_cluster : cluster->getConnectedClustersOutRef())
             {
+                boost::multiprecision::cpp_int ori = total_spikes;
                 num_conns++;
                 total_spikes += cluster->numOfSpikes(conn_cluster);
+                if (total_spikes < ori)
+                {
+                    std::cerr << "printClusterStats: overflow detected." << std::endl;
+                    exit(0);
+                }
             }
 
             file << cid << " " << num_inputs << " " 

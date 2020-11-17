@@ -1,6 +1,8 @@
 #ifndef __UNROLL_H__
 #define __UNROLL_H__
 
+#include <boost/multiprecision/cpp_int.hpp> 
+
 #include <cassert>
 #include <fstream>
 #include <iostream>
@@ -22,7 +24,7 @@ class Neuron
     std::vector<UINT64> input_neurons;
     std::vector<UINT64> output_neurons;
 
-    UINT64 num_spikes = 0;
+    boost::multiprecision::cpp_int num_spikes = 0;
 
     UINT64 parent = INVALID_ID; // Which neuron it unrolls from
 
@@ -56,9 +58,23 @@ class Neuron
         output_neurons = _list;
     }
 
-    void addNumSpikesFromOneInput(UINT64 _spike) { num_spikes += _spike; }
-    void setNumSpikes(UINT64 _num_spikes) { num_spikes = _num_spikes; }
+    void addNumSpikesFromOneInput(boost::multiprecision::cpp_int _spike)
+    {
+        boost::multiprecision::cpp_int ori = num_spikes; 
+        num_spikes += _spike;
+        if (num_spikes < ori)
+	{ 
+            std::cerr << "addNumSpikesFromOneInput: overflow detected." << std::endl;
+            exit(0);
+        }
+    }
+    void setNumSpikes(boost::multiprecision::cpp_int _num_spikes)
+    {
+        num_spikes = _num_spikes;
+    }
     void resetNumSpikes() { num_spikes = 0; }
+    
+    boost::multiprecision::cpp_int numOfSpikes() { return num_spikes; }
 
     void setNeuronId(UINT64 _id) { neuron_id = _id; }
     int getNeuronId() { return neuron_id; };
@@ -68,8 +84,6 @@ class Neuron
     std::vector<UINT64> &getOutputNeuronList() { return output_neurons; };
     unsigned numInputNeurons() { return input_neurons.size(); }
     unsigned numOutputNeurons() { return output_neurons.size(); }
-
-    UINT64 numOfSpikes() { return num_spikes; }
 
     void setParentId(UINT64 _id) { parent = _id; }
     UINT64 getParentId() { return parent; }

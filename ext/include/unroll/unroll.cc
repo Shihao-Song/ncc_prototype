@@ -30,14 +30,14 @@ Model::Model(const std::string& connection_file_name,
 
     // Initialize all the spike information
     // for (auto &neuron : snn)
-    for (auto i = 0; i < snn.size(); i++)
-    {
-        auto &outputs = snn[i].getOutputNeuronList();
-        for (auto &output : outputs) 
-        {
-            snn[output].addNumSpikesFromOneInput(snn[i].numOfSpikes());
-        }
-    }
+    // for (auto i = 0; i < snn.size(); i++)
+    // {
+    //     auto &outputs = snn[i].getOutputNeuronList();
+    //     for (auto &output : outputs) 
+    //     {
+    //         snn[output].addNumSpikesFromOneInput(snn[i].numOfSpikes());
+    //     }
+    // }
 }
 
 Model::~Model()
@@ -193,7 +193,7 @@ void Model::unroll()
             // Step two, reset the input neurons of the currently processing neuron
             usnn[idx].getInputNeuronList().clear();
             usnn[idx].getInputNeuronList().shrink_to_fit();
-            usnn[idx].resetNumSpikes();
+            // usnn[idx].resetNumSpikes();
 
             // Step three, unrolling
             // The number of intermediate neurons to unroll the current neuron
@@ -209,13 +209,20 @@ void Model::unroll()
                 {
                     usnn.emplace_back(cur_unrolling_neuron_id);
 
-                    UINT64 total_spikes = 0;
+                    boost::multiprecision::cpp_int total_spikes = 0;
 
                     for (auto i = 0; i < max_fanin; i++)
                     {
+                        boost::multiprecision::cpp_int ori = total_spikes;
+
                         usnn[input_neurons_copy[i]].getOutputNeuronList().push_back(
                             cur_unrolling_neuron_id);
                         total_spikes += usnn[input_neurons_copy[i]].numOfSpikes();
+                        if (total_spikes < ori)
+                        {
+                            std::cerr << "unroll: overflow detected." << std::endl;
+                            exit(0);
+                        }
 
                         usnn[cur_unrolling_neuron_id].getInputNeuronList().push_back(
                             input_neurons_copy[i]);
@@ -233,21 +240,28 @@ void Model::unroll()
                     usnn[usnn[idx].getNeuronId()].getInputNeuronList().push_back(
                         prev_unrolling_neuron_id);
 
-                    UINT64 total_spikes = usnn[prev_unrolling_neuron_id].numOfSpikes();
+                    // boost::multiprecision::cpp_int total_spikes = 
+                    //     usnn[prev_unrolling_neuron_id].numOfSpikes();
 
                     for (auto i = max_fanin + (inter_neu_idx - 1) * (max_fanin - 1);
                               i < num_inputs;
                               i++)
                     {
+                        // boost::multiprecision::cpp_int ori = total_spikes;
 
                         usnn[input_neurons_copy[i]].getOutputNeuronList().push_back(
                             usnn[idx].getNeuronId());
-                        total_spikes += usnn[input_neurons_copy[i]].numOfSpikes();
+                        // total_spikes += usnn[input_neurons_copy[i]].numOfSpikes();
+                        // if (total_spikes < ori)
+                        // {
+                            // std::cerr << "unroll: overflow detected." << std::endl;
+                            // exit(0);
+                        // }
 
                         usnn[usnn[idx].getNeuronId()].getInputNeuronList().push_back(
                             input_neurons_copy[i]);
                     }
-                    usnn[usnn[idx].getNeuronId()].setNumSpikes(total_spikes);
+                    // usnn[usnn[idx].getNeuronId()].setNumSpikes(total_spikes);
                 }
                 else
                 {
@@ -258,15 +272,23 @@ void Model::unroll()
                     usnn[cur_unrolling_neuron_id].getInputNeuronList().push_back(
                         prev_unrolling_neuron_id);
 
-                    UINT64 total_spikes = usnn[prev_unrolling_neuron_id].numOfSpikes();
+                    boost::multiprecision::cpp_int total_spikes = 
+                        usnn[prev_unrolling_neuron_id].numOfSpikes();
                     
                     for (auto i = max_fanin + (inter_neu_idx - 1) * (max_fanin - 1); 
                               i < max_fanin + inter_neu_idx * (max_fanin - 1);
                               i++)
                     {
+                        boost::multiprecision::cpp_int ori = total_spikes;
+
                         usnn[input_neurons_copy[i]].getOutputNeuronList().push_back(
                             cur_unrolling_neuron_id);
                         total_spikes += usnn[input_neurons_copy[i]].numOfSpikes();
+                        if (total_spikes < ori)
+                        {
+                            std::cerr << "unroll: overflow detected." << std::endl;
+                            exit(0);
+                        }
 
                         usnn[cur_unrolling_neuron_id].getInputNeuronList().push_back(
                             input_neurons_copy[i]);
