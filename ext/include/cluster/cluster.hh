@@ -248,10 +248,10 @@ class Clusters
             }
 
             file << cid << " " 
-                 // << num_inputs << " " 
-                 // << num_outputs << " " 
-                 // << num_synapses << " "
-                 // << num_conns << " "
+                 << num_inputs << " " 
+                 << num_outputs << " " 
+                 << num_synapses << " "
+                 << num_conns << " "
                  << total_spikes_in << " "
                  << total_spikes_out << "\n";
         }
