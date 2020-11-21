@@ -393,12 +393,17 @@ class Clusters
         // Calculate inter-cluster spikes
         for (auto &cluster : clusters)
         {
+            for (auto &input : cluster->getInputsListRef())
+            {
+                cluster->addNumSpikesIn(neuron_status[input].numOfSpikes());
+            }
+
             for (auto &output : cluster->getOutputsListRef())
             {
                 for (auto &conn_cluster : neuron_status[output].getConnectedClustersRef())
                 {
                     cluster->addNumSpikesOut(conn_cluster, neuron_status[output].numOfSpikes());
-                    clusters[conn_cluster]->addNumSpikesIn(neuron_status[output].numOfSpikes());
+                    // clusters[conn_cluster]->addNumSpikesIn(neuron_status[output].numOfSpikes());
                 }
             }
         }

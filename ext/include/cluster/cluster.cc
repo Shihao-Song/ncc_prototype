@@ -130,7 +130,7 @@ void Clusters::minClusters(std::vector<Neuron>& snn)
     }
     connectedComponents();
     // postClustering();
-    // debugPrint();
+    //debugPrint();
 }
 
 void Clusters::minComm(std::vector<Neuron>& snn)
