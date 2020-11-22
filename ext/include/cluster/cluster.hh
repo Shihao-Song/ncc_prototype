@@ -6,12 +6,21 @@
 #include <cstdint>
 #include <list>
 #include <memory>
+#include <mutex>
 #include <set>
+#include <shared_mutex>
 #include <stack>
 #include <unordered_map>
 #include <vector>
 
+#include <boost/functional/hash.hpp>
+
 #include "unroll/unroll.hh"
+
+// Performance consideration:
+// std::set should be enough since the number of elements is not significant
+// However, keep this in mind when we are testing big networks in the future.
+// Also, the std::unordered_set takes much space, this should also be considered
 
 namespace EXT
 {
@@ -45,6 +54,112 @@ class Neuron_Status
     void addConnectedCluster(UINT64 _cluster) { connected_clusters.insert(_cluster); }
 };
 
+class Cluster
+{
+  protected:
+    const unsigned MIN_FANIN; 
+    const unsigned CROSSBAR_SIZE;
+
+  protected:
+    UINT64 cluster_id = INVALID_ID;
+
+    std::set<UINT64> inputs;
+    std::set<UINT64> outputs;
+
+    std::set<UINT64> connected_clusters_out;
+    std::set<UINT64> connected_clusters_in;
+
+    boost::multiprecision::cpp_int in_coming_spikes = 0;
+    std::unordered_map<UINT64, boost::multiprecision::cpp_int> cluster_spikes_out_map;
+
+    unsigned num_synapses = 0;
+
+  public:
+    Cluster(UINT64 _id, unsigned _fanin, unsigned _crossbar_size)
+        : MIN_FANIN(_fanin)
+        , CROSSBAR_SIZE(_crossbar_size)
+        , cluster_id(_id) {}
+
+    UINT64 getClusterId() { return cluster_id; }
+
+    void addInput(UINT64 _input) { inputs.insert(_input); }
+    void addOutput(UINT64 _output) { outputs.insert(_output); }
+
+    std::set<UINT64> &getInputsListRef() { return inputs; }
+    std::set<UINT64> getInputsListCopy() { return inputs; }
+
+    std::set<UINT64> &getOutputsListRef() { return outputs; }
+    std::set<UINT64> getOutputsListCopy() { return outputs; }
+
+    std::set<UINT64> &getConnectedClustersOutRef() { return connected_clusters_out; }
+    std::set<UINT64> getConnectedClustersOutCopy() { return connected_clusters_out; }
+    void addConnectedClusterOut(UINT64 _cluster) { connected_clusters_out.insert(_cluster); }
+
+    std::set<UINT64> &getConnectedClustersInRef() { return connected_clusters_in; }
+    std::set<UINT64> getConnectedClustersInCopy() { return connected_clusters_in; }
+    void addConnectedClusterIn(UINT64 _cluster) { connected_clusters_in.insert(_cluster); }
+
+    void addSynapse() { num_synapses++; }
+    unsigned numSynapses() { return num_synapses; }
+
+    void addNumSpikesIn(boost::multiprecision::cpp_int _spikes)
+    {
+        boost::multiprecision::cpp_int ori = in_coming_spikes;
+        in_coming_spikes += _spikes;
+        if (in_coming_spikes < ori)
+        {
+            std::cerr << "addNumSpikesIn: overflow detected." << std::endl;
+            exit(0);
+        }
+    }
+
+    void addNumSpikesOut(UINT64 cid, boost::multiprecision::cpp_int _spikes)
+    {
+        if (auto iter = cluster_spikes_out_map.find(cid);
+                 iter != cluster_spikes_out_map.end())
+        {
+            boost::multiprecision::cpp_int ori = iter->second;
+            iter->second += _spikes;
+            if (iter->second < ori)
+            {
+                std::cerr << "addNumSpikesOut: overflow detected." << std::endl;
+                exit(0);
+            }
+        }
+        else
+        {
+            cluster_spikes_out_map.insert({cid, _spikes});
+        }
+    }
+
+    boost::multiprecision::cpp_int numOfSpikesIn()
+    {
+        return in_coming_spikes;
+    }
+
+    boost::multiprecision::cpp_int numOfSpikesOut(UINT64 cid)
+    {
+        auto iter = cluster_spikes_out_map.find(cid);
+        assert(iter != cluster_spikes_out_map.end());
+        return iter->second;
+    }
+
+    bool isInputMapped(UINT64 _input)
+    {
+        return (inputs.find(_input) != inputs.end());
+    }
+
+    bool canBePacked(unsigned num_inputs)
+    {
+        return (((inputs.size() + num_inputs) <= CROSSBAR_SIZE) && 
+                 (outputs.size() < CROSSBAR_SIZE));
+    }
+
+    unsigned getUtilization() { return (inputs.size() + outputs.size()); }
+    unsigned numAvailInputPorts() { return (CROSSBAR_SIZE - inputs.size()); }
+};
+
+static const unsigned NUM_THREADS = 2;
 typedef EXT::Unrolling::Neuron Neuron;
 class Clusters
 {
@@ -55,112 +170,6 @@ class Clusters
     const unsigned CROSSBAR_SIZE;
 
   protected:
-    class Cluster
-    {
-      protected:
-        const unsigned MIN_FANIN; 
-        const unsigned CROSSBAR_SIZE;
-
-      protected:
-        UINT64 cluster_id = INVALID_ID;
-
-        std::set<UINT64> inputs;
-        std::set<UINT64> outputs;
-
-        std::set<UINT64> connected_clusters_out;
-        std::set<UINT64> connected_clusters_in;
-
-        boost::multiprecision::cpp_int in_coming_spikes = 0;
-        std::unordered_map<UINT64, boost::multiprecision::cpp_int> cluster_spikes_out_map;
-
-        unsigned num_synapses = 0;
-      // public:
-      public:
-        Cluster(UINT64 _id, unsigned _fanin, unsigned _crossbar_size)
-            : MIN_FANIN(_fanin)
-            , CROSSBAR_SIZE(_crossbar_size)
-            , cluster_id(_id) {}
-
-        UINT64 getClusterId() { return cluster_id; }
-
-        void addInput(UINT64 _input) { inputs.insert(_input); }
-        void addOutput(UINT64 _output) { outputs.insert(_output); }
-
-        std::set<UINT64> &getInputsListRef() { return inputs; }
-        std::set<UINT64> getInputsListCopy() { return inputs; }
-
-        std::set<UINT64> &getOutputsListRef() { return outputs; }
-        std::set<UINT64> getOutputsListCopy() { return outputs; }
-
-        std::set<UINT64> &getConnectedClustersOutRef() { return connected_clusters_out; }
-        std::set<UINT64> getConnectedClustersOutCopy() { return connected_clusters_out; }
-        void addConnectedClusterOut(UINT64 _cluster) { connected_clusters_out.insert(_cluster); }
-
-        std::set<UINT64> &getConnectedClustersInRef() { return connected_clusters_in; }
-        std::set<UINT64> getConnectedClustersInCopy() { return connected_clusters_in; }
-        void addConnectedClusterIn(UINT64 _cluster) { connected_clusters_in.insert(_cluster); }
-
-        void addSynapse() { num_synapses++; }
-        unsigned numSynapses() { return num_synapses; }
-
-        void addNumSpikesIn(boost::multiprecision::cpp_int _spikes)
-        {
-            boost::multiprecision::cpp_int ori = in_coming_spikes;
-            in_coming_spikes += _spikes;
-            if (in_coming_spikes < ori)
-            {
-                std::cerr << "addNumSpikesIn: overflow detected." << std::endl;
-                exit(0);
-            }
-        }
-
-        void addNumSpikesOut(UINT64 cid, boost::multiprecision::cpp_int _spikes)
-        {
-            // std::cout << "\nAdding: " << cid << " " << _spikes << "\n";
-
-            if (auto iter = cluster_spikes_out_map.find(cid);
-                     iter != cluster_spikes_out_map.end())
-            {
-                boost::multiprecision::cpp_int ori = iter->second;
-                iter->second += _spikes;
-                if (iter->second < ori)
-                {
-                    std::cerr << "addNumSpikesOut: overflow detected." << std::endl;
-                    exit(0);
-                }
-            }
-            else
-            {
-                cluster_spikes_out_map.insert({cid, _spikes});
-            }
-	}
-
-        boost::multiprecision::cpp_int numOfSpikesIn()
-        {
-            return in_coming_spikes;
-        }
-
-        boost::multiprecision::cpp_int numOfSpikesOut(UINT64 cid)
-        {
-            auto iter = cluster_spikes_out_map.find(cid);
-            assert(iter != cluster_spikes_out_map.end());
-            return iter->second;
-        }
-
-        bool isInputMapped(UINT64 _input)
-        {
-            return (inputs.find(_input) != inputs.end());
-        }
-
-        bool canBePacked(unsigned num_inputs)
-        {
-            return (((inputs.size() + num_inputs) <= CROSSBAR_SIZE) && 
-                     (outputs.size() < CROSSBAR_SIZE));
-        }
-
-        unsigned getUtilization() { return (inputs.size() + outputs.size()); }
-        unsigned numAvailInputPorts() { return (CROSSBAR_SIZE - inputs.size()); }
-    };
 
     std::vector<std::unique_ptr<Cluster>> clusters;
     std::vector<Cluster*> sorted_clusters;
@@ -180,7 +189,8 @@ class Clusters
         auto t1 = std::chrono::high_resolution_clock::now();
         if (mode == "min-clusters")
         {
-            minClusters(snn);
+            minClustersV2(snn);
+            // minClusters(snn);
         }
         else if (mode == "random")
         {
@@ -261,9 +271,50 @@ class Clusters
 
   protected: // Helper function
     void minClusters(std::vector<Neuron>&);
-    // void minClustersV2(std::vector<Neuron>&);
+    void minClustersV2(std::vector<Neuron>&); // utilize threading
     void random(std::vector<Neuron>&);
     void minComm(std::vector<Neuron>&);
+
+    class InputClusterMap
+    {
+      protected:
+        template < typename SEQUENCE > struct SeqHash
+        {
+            std::size_t operator() ( const SEQUENCE& seq ) const
+            {
+                std::size_t hash = 0 ;
+                boost::hash_range( hash, seq.begin(), seq.end() ) ;
+                return hash ;
+            }
+        };
+        template < typename SEQUENCE, typename T >
+        using sequence_to_data_map = std::unordered_map< SEQUENCE, T, SeqHash<SEQUENCE> >;
+
+        sequence_to_data_map<std::vector<UINT64>,std::vector<UINT64>> inputs_cluster_mapping;
+
+      public:
+        InputClusterMap(){}
+
+        void addInputsClusterMapping(std::vector<UINT64>&inputs,UINT64 cid)
+        {
+            std::unique_lock<std::shared_timed_mutex> l(_protect);
+            if (auto iter = inputs_cluster_mapping.find(inputs);
+                    iter != inputs_cluster_mapping.end())
+            {
+                (*iter).second.push_back(cid);
+            }
+            else
+            {
+                std::vector<UINT64> clusters{cid};
+                inputs_cluster_mapping.insert({inputs,clusters});
+            }
+        }
+
+        const auto& getInputsClusterMapping() { return inputs_cluster_mapping; }
+
+      protected:
+        std::shared_timed_mutex _protect;
+    };
 
     UINT64 addCluster()
     {
