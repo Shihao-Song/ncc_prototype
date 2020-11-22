@@ -1,9 +1,8 @@
 #include "cluster/cluster.hh"
 
-#include <execution>
+// #include <execution>
 #include <iostream>
 #include <random>
-#include <thread> 
 
 namespace EXT
 {
@@ -132,146 +131,6 @@ void Clusters::minClusters(std::vector<Neuron>& snn)
     connectedComponents();
     // postClustering();
     //debugPrint();
-}
-
-void Clusters::minClustersV2(std::vector<Neuron>& snn)
-{
-    std::cout << "---------------------------------------\n";
-    std::cout << "Clustering Step - Minimize Clusters V2\n";
-    std::cout << "Minimum fanin: " << MIN_FANIN << "\n";
-    std::cout << "Crossbar size: " << CROSSBAR_SIZE << "\n";
-    std::cout << "---------------------------------------\n";
-
-    // Record the clustering status for each neuron
-    neuron_status.resize(snn.size());
-    for (auto &neuron : snn)
-    {
-        UINT64 id = neuron.getNeuronId();
-        boost::multiprecision::cpp_int spikes = neuron.numOfSpikes();
-
-        neuron_status[id].setNumOfSpikes(spikes);
-    }
-
-    // debugPrint();
-
-    for (auto cur_neuron_idx = 0;
-              cur_neuron_idx < snn.size();
-              cur_neuron_idx++)
-    {
-        if (snn[cur_neuron_idx].hasParent()) { break; }
-
-        if (snn[cur_neuron_idx].numInputNeurons()) 
-        {
-            // std::cout << "\nMapping neuron id: " << snn[cur_neuron_idx].getNeuronId() << "\n";
-            // All the input neurons before unrolling
-            std::list<UINT64> non_unrolled_inputs;
-            // Input neuron -> Output neuron mapping
-            std::unordered_map<UINT64, UINT64> input_to_output_map;
-
-            // Case 1: the neuron is unrolled
-            if (auto &children = snn[cur_neuron_idx].getChildrenRef();
-                    children.size() > 0)
-            {
-                std::set<UINT64> intermediate_neurons;
-                for (auto &child : children) { intermediate_neurons.insert(child); }
-
-                for (auto &inter_neuron : children)
-                {
-                    for (auto &raw_input : snn[inter_neuron].getInputNeuronList())
-                    {
-                        if (intermediate_neurons.find(raw_input) == intermediate_neurons.end())
-                        {
-                            non_unrolled_inputs.push_back(raw_input);
-                            input_to_output_map.insert({raw_input, inter_neuron});
-                        }
-                    }
-                }
-                for (auto &raw_input : snn[cur_neuron_idx].getInputNeuronList())
-                {
-                    if (intermediate_neurons.find(raw_input) == intermediate_neurons.end())
-                    {
-                        non_unrolled_inputs.push_back(raw_input);
-                        input_to_output_map.insert({raw_input, cur_neuron_idx});
-                    }
-		}
-            }
-            // Case 2: the neuron is not unrolled
-            else
-            {
-                auto &inputs_to_pack = snn[cur_neuron_idx].getInputNeuronList();
-                for (auto i = 0; i < inputs_to_pack.size(); i++)
-                {
-                    auto input_to_pack = inputs_to_pack[i];
-                    if (i == CROSSBAR_SIZE) { break; }
-
-                    non_unrolled_inputs.push_back(input_to_pack);
-                    input_to_output_map.insert({input_to_pack,
-                                                snn[cur_neuron_idx].getNeuronId()});
-                }
-            }
-
-            // thread-func
-            auto f = [&](unsigned id)
-            {
-                if (id == 0)
-                {
-                    std::cout << "Thread ID: " << id << "\n";
-                    for (auto input : non_unrolled_inputs) { std::cout << input << " "; }
-                    std::cout << "\n";
-                }
-            };
-            std::vector<std::thread> threads;
-            for (auto i = 0; i < NUM_THREADS; i++) { threads.emplace_back(f, i); }
-            for (auto i = 0; i < NUM_THREADS; i++) { threads[i].join(); }
-            std::cout << "\n";
-
-            std::sort(// std::execution::par,
-                      sorted_clusters.begin(),
-                      sorted_clusters.end(),
-                      [](auto &left, auto &right)
-                      {
-                          return left->getUtilization() > right->getUtilization();
-                      });
-
-            for (auto &cluster : sorted_clusters)
-            {
-                if (non_unrolled_inputs.size() == 0) { break; }
-
-                UINT64 cid = cluster->getClusterId();
-
-                unsigned num_to_pack = numCanBePacked(cid,
-                                                      non_unrolled_inputs);
-                packToCluster(num_to_pack,
-                              snn[cur_neuron_idx].getNeuronId(),
-                              cid,
-                              input_to_output_map,
-                              non_unrolled_inputs);
-            }
-            // std::cout << "Inputs: ";
-            // for (auto &input : non_unrolled_inputs) { std::cout << input << " "; }
-            // std::cout << "\n";
-
-            // Need new clusters to map the rest
-            while (true)
-            {
-                if (non_unrolled_inputs.size() == 0) { break; }
-
-                auto cid = addCluster();
-                unsigned num_to_pack = numCanBePacked(cid,
-                                                      non_unrolled_inputs);
-                packToCluster(num_to_pack,
-                              snn[cur_neuron_idx].getNeuronId(),
-                              cid,
-                              input_to_output_map,
-                              non_unrolled_inputs);
-            }
-            // std::cout << "Mapped neuron id: " << snn[cur_neuron_idx].getNeuronId() << "\n";
-            // debugPrint();
-        }
-    }
-    connectedComponents();
-    // postClustering();
-    debugPrint();
 }
 
 void Clusters::minComm(std::vector<Neuron>& snn)

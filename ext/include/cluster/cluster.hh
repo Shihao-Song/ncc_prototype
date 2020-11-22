@@ -6,14 +6,14 @@
 #include <cstdint>
 #include <list>
 #include <memory>
-#include <mutex>
+// #include <mutex>
 #include <set>
-#include <shared_mutex>
+// #include <shared_mutex>
 #include <stack>
 #include <unordered_map>
 #include <vector>
 
-#include <boost/functional/hash.hpp>
+// #include <boost/functional/hash.hpp>
 
 #include "unroll/unroll.hh"
 
@@ -158,8 +158,19 @@ class Cluster
     unsigned getUtilization() { return (inputs.size() + outputs.size()); }
     unsigned numAvailInputPorts() { return (CROSSBAR_SIZE - inputs.size()); }
 };
-
-static const unsigned NUM_THREADS = 2;
+/*
+template < typename SEQUENCE > struct SeqHash
+{
+    std::size_t operator() ( const SEQUENCE& seq ) const
+    {
+        std::size_t hash = 0 ;
+        boost::hash_range( hash, seq.begin(), seq.end() ) ;
+        return hash ;
+    }
+};
+template < typename SEQUENCE, typename T >
+using sequence_to_data_map = std::unordered_map< SEQUENCE, T, SeqHash<SEQUENCE> >;
+*/
 typedef EXT::Unrolling::Neuron Neuron;
 class Clusters
 {
@@ -189,8 +200,7 @@ class Clusters
         auto t1 = std::chrono::high_resolution_clock::now();
         if (mode == "min-clusters")
         {
-            minClustersV2(snn);
-            // minClusters(snn);
+            minClusters(snn);
         }
         else if (mode == "random")
         {
@@ -271,50 +281,8 @@ class Clusters
 
   protected: // Helper function
     void minClusters(std::vector<Neuron>&);
-    void minClustersV2(std::vector<Neuron>&); // utilize threading
     void random(std::vector<Neuron>&);
     void minComm(std::vector<Neuron>&);
-
-    class InputClusterMap
-    {
-      protected:
-        template < typename SEQUENCE > struct SeqHash
-        {
-            std::size_t operator() ( const SEQUENCE& seq ) const
-            {
-                std::size_t hash = 0 ;
-                boost::hash_range( hash, seq.begin(), seq.end() ) ;
-                return hash ;
-            }
-        };
-        template < typename SEQUENCE, typename T >
-        using sequence_to_data_map = std::unordered_map< SEQUENCE, T, SeqHash<SEQUENCE> >;
-
-        sequence_to_data_map<std::vector<UINT64>,std::vector<UINT64>> inputs_cluster_mapping;
-
-      public:
-        InputClusterMap(){}
-
-        void addInputsClusterMapping(std::vector<UINT64>&inputs,UINT64 cid)
-        {
-            std::unique_lock<std::shared_timed_mutex> l(_protect);
-            if (auto iter = inputs_cluster_mapping.find(inputs);
-                    iter != inputs_cluster_mapping.end())
-            {
-                (*iter).second.push_back(cid);
-            }
-            else
-            {
-                std::vector<UINT64> clusters{cid};
-                inputs_cluster_mapping.insert({inputs,clusters});
-            }
-        }
-
-        const auto& getInputsClusterMapping() { return inputs_cluster_mapping; }
-
-      protected:
-        std::shared_timed_mutex _protect;
-    };
 
     UINT64 addCluster()
     {
