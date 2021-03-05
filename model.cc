@@ -7,7 +7,7 @@
 
 #include <sstream>
 
-#include "protobuf/proto_graph/graph.pb.h"
+// #include "protobuf/proto_graph/graph.pb.h"
 
 #include <boost/filesystem.hpp>
 
@@ -61,6 +61,7 @@ void Model::Architecture::connector()
             exit(0);
         }
 
+        /*
         auto name = layers[i].name;
         auto type = layers[i].layer_type;
 
@@ -81,6 +82,7 @@ void Model::Architecture::connector()
         std::cout << "Output shape: ";
         for (auto dim : output_dims) { std::cout << dim << " "; }
         std::cout << "\n\n";
+        */
     }
 }
 
@@ -655,6 +657,7 @@ void Model::Architecture::printConns(std::string &out_root)
     weights_out.close();
     conns_out.close();
 
+    /*
     // Protobuf record
     GOOGLE_PROTOBUF_VERIFY_VERSION;
     NCC_Graph_Proto::Graph graph;
@@ -727,6 +730,7 @@ void Model::Architecture::printConns(std::string &out_root)
     }
     
     google::protobuf::ShutdownProtobufLibrary();
+    */
 }
 
 void Model::loadArch(std::string &arch_file)

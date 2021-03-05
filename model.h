@@ -218,10 +218,32 @@ class Model
                 std::cout << "Output shape: ";
                 for (auto dim : output_dims) { std::cout << dim << " "; }
                 std::cout << "\n";
+                
+                auto &w_dims = layer.w_dims;
+                auto &weights = layer.weights;
+                auto &b_dims = layer.b_dims;
+                auto &bias = layer.bias;
+                if (weights.size())
+                {
+                    std::cout << "Weights dim (" << weights.size() << "): ";
+                    for (auto dim : w_dims) { std::cout << dim << " "; }
+                    std::cout << "\n";
+                }
+
+                if (bias.size())
+                {
+                    std::cout << "Bias dim (" << bias.size() << "): ";
+                    for (auto dim : b_dims) { std::cout << dim << " "; }
+                    std::cout << "\n";
+                }
+
+                std::cout << "Total params: " << weights.size() + bias.size() << "\n";
+
+                std::cout << "\n";
                 // TODO, print neuron ID range
-                auto &out_neuro_ids = layer.output_neuron_ids;
-                std::cout << "Output neuron id range: "
-                          << out_neuro_ids[0] << " -> " << out_neuro_ids[out_neuro_ids.size() - 1] << "\n\n";
+                // auto &out_neuro_ids = layer.output_neuron_ids;
+                // std::cout << "Output neuron id range: "
+                //           << out_neuro_ids[0] << " -> " << out_neuro_ids[out_neuro_ids.size() - 1] << "\n\n";
 /*
                 auto &out_neuro_ids = layer.output_neuron_ids;
                 std::cout << "Output neuron id: ";
