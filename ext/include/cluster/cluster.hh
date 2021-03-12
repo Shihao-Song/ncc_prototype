@@ -33,6 +33,8 @@ const UINT64 INVALID_ID = (UINT64) - 1;
 class Neuron_Status
 {
   protected:
+    UINT64 parent_id;
+
     boost::multiprecision::cpp_int num_spikes;
 
     std::set<UINT64> connected_clusters;
@@ -43,7 +45,7 @@ class Neuron_Status
   public:
     Neuron_Status() {}
 
-    void setNeuronId(UINT64 _id) { id = _id; }
+    void setNeuronId(UINT64 _id) { id = _id; parent_id = _id; }
     UINT64 getNeuronId() { return id; }
 
     void setNumOfSpikes(boost::multiprecision::cpp_int _spikes) { num_spikes = _spikes; }
@@ -52,6 +54,9 @@ class Neuron_Status
     std::set<UINT64> &getConnectedClustersRef() { return connected_clusters; }
     std::set<UINT64> getConnectedClustersCopy() { return connected_clusters; }
     void addConnectedCluster(UINT64 _cluster) { connected_clusters.insert(_cluster); }
+
+    auto getParentId() { return parent_id; }
+    void setParentId(UINT64 _id) { parent_id = _id; }
 };
 
 class Cluster
@@ -73,6 +78,9 @@ class Cluster
     std::unordered_map<UINT64, boost::multiprecision::cpp_int> cluster_spikes_out_map;
 
     unsigned num_synapses = 0;
+
+    // Record input->output mapping
+    std::unordered_map<UINT64, std::vector<UINT64>> input_output_mappings;
 
   public:
     Cluster(UINT64 _id, unsigned _fanin, unsigned _crossbar_size)
@@ -157,6 +165,9 @@ class Cluster
 
     unsigned getUtilization() { return (inputs.size() + outputs.size()); }
     unsigned numAvailInputPorts() { return (CROSSBAR_SIZE - inputs.size()); }
+
+    // get IO mapping
+    auto& getIOMappings() { return input_output_mappings; }
 };
 /*
 template < typename SEQUENCE > struct SeqHash
@@ -246,6 +257,25 @@ class Clusters
 
         for (auto &cluster : clusters)
         {
+            auto &io_mappings = cluster->getIOMappings();
+            auto &inputs = cluster->getInputsListRef();
+            for (auto input : inputs)
+            {
+                auto output_iter = io_mappings.find(input);
+                // std::cout << input << "\n";
+                assert(output_iter != io_mappings.end());
+                auto &outputs = output_iter->second;
+                for (auto output : outputs)
+                {
+                    file << cluster->getClusterId() << " "
+                         << input << " "
+                         << output << " "
+                         << neuron_status[input].numOfSpikes() << " "
+                         << neuron_status[input].getParentId() << " "
+                         << neuron_status[output].getParentId() << "\n";
+                }
+            }
+            /*
             UINT64 cid = cluster->getClusterId();
 
             unsigned num_inputs = cluster->getInputsListRef().size();
@@ -274,6 +304,7 @@ class Clusters
                  << num_conns << " "
                  << total_spikes_in << " "
                  << total_spikes_out << "\n";
+            */
         }
 
         file.close();
@@ -303,7 +334,7 @@ class Clusters
     unsigned numCanBePacked(UINT64 cid,
                             std::list<UINT64> &non_unrolled_inputs);
 
-    void packToCluster(unsigned total_inputs_can_be_packed,
+    bool packToCluster(unsigned total_inputs_can_be_packed,
                        UINT64 cur_neuron_idx,
                        UINT64 cid,
                        std::unordered_map<UINT64, UINT64> &input_to_output_map,
@@ -376,6 +407,7 @@ class Clusters
             {
                 if (neurons_to_connect.size() == 0) { break; }
 
+                // TODO, this is very dangerous, change it please.
                 if (num_new_neurons % CROSSBAR_SIZE == 0)
                 {
                     if (num_new_neurons > 0)
@@ -396,12 +428,25 @@ class Clusters
                 neuron_status.push_back(Neuron_Status());
                 neuron_status[new_neuron_id].
                     setNumOfSpikes(neuron_status[neuron_to_connect].numOfSpikes());
+                neuron_status[new_neuron_id].setNeuronId(new_neuron_id);
 
                 // clusters[new_cid]->addSynapse();
                 clusters[new_cid]->addInput(neuron_to_connect);
                 neuron_status[neuron_to_connect].
                     addConnectedCluster(clusters[new_cid]->getClusterId());
                 clusters[new_cid]->addOutput(new_neuron_id);
+
+                if (auto mapping_iter = clusters[new_cid]->getIOMappings().find(neuron_to_connect);
+                        mapping_iter != clusters[new_cid]->getIOMappings().end())
+                {
+                    (mapping_iter->second).push_back(neuron_to_connect);
+                }
+                else
+                {
+                    std::vector<UINT64> outs = {neuron_to_connect};
+                    clusters[new_cid]->getIOMappings().insert({neuron_to_connect, outs});
+                }
+
 
                 neurons_to_connect.pop_front();
             }
