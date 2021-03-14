@@ -111,6 +111,7 @@ void Clusters::minClusters(std::vector<Neuron>& snn)
                 unsigned num_to_pack = numCanBePacked(cid,
                                                       non_unrolled_inputs);
 
+                /* Prepare a list of input neurons that can be packed */
                 std::vector<UINT64> packed_neurons;
                 auto cnt = 0;
                 for (auto &input : non_unrolled_inputs)
@@ -119,13 +120,18 @@ void Clusters::minClusters(std::vector<Neuron>& snn)
                     packed_neurons.push_back(input);
                     cnt++;
                 }
+
+                /* Pack the input neurons to the cluster */
                 bool packed = packToCluster(num_to_pack,
                                   snn[cur_neuron_idx].getNeuronId(),
                                   cid,
                                   input_to_output_map,
                                   non_unrolled_inputs);
+
+                /* Successfully packed to the cluster */
                 if (packed)
                 {
+                    /* Get the output neuron which the input neurons connect to */
                     UINT64 cur_output_neuron_id;
                     if (non_unrolled_inputs.size() > 0)
                     {
@@ -136,6 +142,7 @@ void Clusters::minClusters(std::vector<Neuron>& snn)
                         cur_output_neuron_id = cur_neuron_idx;
                     }
 
+                    /* Set the IO mappings */
                     auto &io_mappings = cluster->getIOMappings();
                     for (auto input : packed_neurons)
                     {
@@ -170,7 +177,8 @@ void Clusters::minClusters(std::vector<Neuron>& snn)
                 auto cid = addCluster();
                 unsigned num_to_pack = numCanBePacked(cid,
                                                       non_unrolled_inputs);
-		
+
+                /* Prepare a list of input neurons that can be packed */
                 std::vector<UINT64> packed_neurons;
                 auto cnt = 0;
                 for (auto &input : non_unrolled_inputs)
@@ -180,13 +188,17 @@ void Clusters::minClusters(std::vector<Neuron>& snn)
                     cnt++;
                 }
 
+                /* Pack the input neurons to the cluster */
                 bool packed = packToCluster(num_to_pack,
                                   snn[cur_neuron_idx].getNeuronId(),
                                   cid,
                                   input_to_output_map,
                                   non_unrolled_inputs);
+
+                /* Successfully packed to the cluster */
                 if (packed)
                 {
+                    /* Get the output neuron which the input neurons connect to */
                     UINT64 cur_output_neuron_id;
                     if (non_unrolled_inputs.size() > 0)
                     {
@@ -197,6 +209,7 @@ void Clusters::minClusters(std::vector<Neuron>& snn)
                         cur_output_neuron_id = cur_neuron_idx;
                     }
 		
+                    /* Set the IO mappings */
                     auto &io_mappings = clusters[cid]->getIOMappings();
                     for (auto input : packed_neurons)
                     {
@@ -338,8 +351,8 @@ void Clusters::minComm(std::vector<Neuron>& snn)
 
             // At this stage, you have all the neurons ready
             // std::cout << "\n";
-            for (auto &input : non_unrolled_inputs)
-            { std::cout << input << " "; } std::cout << " | ";
+            // for (auto &input : non_unrolled_inputs)
+            // { std::cout << input << " "; } std::cout << " | ";
 
             // non_unrolled_inputs.reverse();
             // for (auto check : non_unrolled_inputs) { std::cout << check << " "; }
@@ -354,6 +367,7 @@ void Clusters::minComm(std::vector<Neuron>& snn)
                 unsigned num_to_pack = numCanBePacked(r_index,
                                                       non_unrolled_inputs);
 
+                /* Prepare a list of input neurons that can be packed to an existing cluster */
                 std::vector<UINT64> packed_neurons;
                 auto cnt = 0;
                 for (auto &input : non_unrolled_inputs)
@@ -362,50 +376,59 @@ void Clusters::minComm(std::vector<Neuron>& snn)
                     packed_neurons.push_back(input);
                     cnt++;
                 }
-                packToCluster(num_to_pack,
-                              snn[cur_neuron_idx].getNeuronId(),
-                              r_index,
-                              input_to_output_map,
-                              non_unrolled_inputs);
-                UINT64 cur_output_neuron_id;
-                if (non_unrolled_inputs.size() > 0)
+
+                /* Pack into the existing cluster */
+                bool packed = packToCluster(num_to_pack,
+                                  snn[cur_neuron_idx].getNeuronId(),
+                                  r_index,
+                                  input_to_output_map,
+                                  non_unrolled_inputs);
+
+                /* Successfully packed? */
+                if (packed)
                 {
-                    cur_output_neuron_id = *(non_unrolled_inputs.begin());
-                }
-                else
-                {
-                    cur_output_neuron_id = cur_neuron_idx;
-                }
-                for (auto input : packed_neurons)
-                {
-                    if (auto mapping_iter = clusters[r_index]->getIOMappings().find(input);
-                            mapping_iter != clusters[r_index]->getIOMappings().end())
+                    /* Get the output neuron id which the input neurons connect to */
+                    UINT64 cur_output_neuron_id;
+                    if (non_unrolled_inputs.size() > 0)
                     {
-                        (mapping_iter->second).push_back(cur_output_neuron_id);
+                        cur_output_neuron_id = *(non_unrolled_inputs.begin());
                     }
                     else
                     {
-                        std::vector<UINT64> outs = {cur_output_neuron_id};
-                        clusters[r_index]->getIOMappings().insert({input, outs});
+                        cur_output_neuron_id = cur_neuron_idx;
                     }
-                }
-                // std::cout << packed_neurons.size() << ": ";
-                for (auto input : packed_neurons) 
-                { std::cout << input << "(" << neuron_status[input].getParentId() << ") "; }
-                if (packed_neurons.size())
-                {
-                    std::cout << "-> " 
-                              << cur_output_neuron_id 
-                              << "(" << neuron_status[cur_output_neuron_id].getParentId() << ") | ";
+
+                    /* Set the input-output mappings */
+                    for (auto input : packed_neurons)
+                    {
+                        if (auto mapping_iter = clusters[r_index]->getIOMappings().find(input);
+                                mapping_iter != clusters[r_index]->getIOMappings().end())
+                        {
+                            (mapping_iter->second).push_back(cur_output_neuron_id);
+                        }
+                        else
+                        {
+                            std::vector<UINT64> outs = {cur_output_neuron_id};
+                            clusters[r_index]->getIOMappings().insert({input, outs});
+                        }
+                    }
+                    // std::cout << packed_neurons.size() << ": ";
+                    // for (auto input : packed_neurons) 
+                    // { std::cout << input << "(" << neuron_status[input].getParentId() << ") "; }
+                    // std::cout << "-> " 
+                    //           << cur_output_neuron_id 
+                    //           << "(" << neuron_status[cur_output_neuron_id].getParentId() << ") | ";
                 }
 
-                // Create a new cluster it cannot be fully mapped		
+                /* Create a new cluster it cannot be fully mapped */
                 if (non_unrolled_inputs.size() == 0) { break; }
 
                 auto cid = addCluster();
                 num_to_pack = numCanBePacked(cid,
                                              non_unrolled_inputs);
                 packed_neurons.clear();
+
+                /* Prepare input neurons that can be packed into the new cluster */
                 cnt = 0;
                 for (auto &input : non_unrolled_inputs)
                 {
@@ -414,45 +437,48 @@ void Clusters::minComm(std::vector<Neuron>& snn)
                     cnt++;
                 }
 
-                packToCluster(num_to_pack,
-                              snn[cur_neuron_idx].getNeuronId(),
-                              cid,
-                              input_to_output_map,
-                              non_unrolled_inputs);
-                if (non_unrolled_inputs.size() > 0)
+                /* Pack into the new cluster*/
+                packed = packToCluster(num_to_pack,
+                             snn[cur_neuron_idx].getNeuronId(),
+                             cid,
+                             input_to_output_map,
+                             non_unrolled_inputs);
+
+                /* Successfully packed? */
+                if (packed)
                 {
-                    cur_output_neuron_id = *(non_unrolled_inputs.begin());
-                }
-                else
-                {
-                    cur_output_neuron_id = cur_neuron_idx;
-                }
-		
-                for (auto input : packed_neurons)
-                {
-                    if (auto mapping_iter = clusters[cid]->getIOMappings().find(input);
-                            mapping_iter != clusters[cid]->getIOMappings().end())
+                    UINT64 cur_output_neuron_id;
+                    if (non_unrolled_inputs.size() > 0)
                     {
-                        (mapping_iter->second).push_back(cur_output_neuron_id);
+                        cur_output_neuron_id = *(non_unrolled_inputs.begin());
                     }
                     else
                     {
-                        std::vector<UINT64> outs = {cur_output_neuron_id};
-                        clusters[cid]->getIOMappings().insert({input, outs});
+                        cur_output_neuron_id = cur_neuron_idx;
                     }
-                }
+		
+                    for (auto input : packed_neurons)
+                    {
+                        if (auto mapping_iter = clusters[cid]->getIOMappings().find(input);
+                                mapping_iter != clusters[cid]->getIOMappings().end())
+                        {
+                            (mapping_iter->second).push_back(cur_output_neuron_id);
+                        }
+                        else
+                        {
+                            std::vector<UINT64> outs = {cur_output_neuron_id};
+                            clusters[cid]->getIOMappings().insert({input, outs});
+                        }
+                    }
 
-                for (auto input : packed_neurons) 
-                { std::cout << input << "(" << neuron_status[input].getParentId() << ") "; }
-                if (packed_neurons.size())
-                {
-                    std::cout << "-> " 
-                              << cur_output_neuron_id 
-                              << "(" << neuron_status[cur_output_neuron_id].getParentId() << ") | ";
+                    // for (auto input : packed_neurons) 
+                    // { std::cout << input << "(" << neuron_status[input].getParentId() << ") "; }
+                    // std::cout << "-> " 
+                    //           << cur_output_neuron_id 
+                    //           << "(" << neuron_status[cur_output_neuron_id].getParentId() << ") | ";
                 }
-
             }
-            std::cout << "\n";
+            // std::cout << "\n";
             // std::cout << "Mapped neuron id: " << snn[cur_neuron_idx].getNeuronId() << "\n";
             // debugPrint();
         }
@@ -544,8 +570,8 @@ void Clusters::random(std::vector<Neuron>& snn)
 
             // At this stage, you have all the neurons ready
             // std::cout << "\n";
-            for (auto &input : non_unrolled_inputs)
-            { std::cout << input << " "; } std::cout << " | ";
+            // for (auto &input : non_unrolled_inputs)
+            // { std::cout << input << " "; } std::cout << " | ";
 
             while (true)
             {
@@ -556,6 +582,7 @@ void Clusters::random(std::vector<Neuron>& snn)
                 unsigned num_to_pack = numCanBePacked(r_index,
                                                       non_unrolled_inputs);
 
+                /* Prepare a list of input neurons that can be packed into an existing cluster */
                 std::vector<UINT64> packed_neurons;
                 auto cnt = 0;
                 for (auto &input : non_unrolled_inputs)
@@ -564,11 +591,15 @@ void Clusters::random(std::vector<Neuron>& snn)
                     packed_neurons.push_back(input);
                     cnt++;
                 }
+
+                /* Pack into the existing cluster */
                 bool packed = packToCluster(num_to_pack,
                                   snn[cur_neuron_idx].getNeuronId(),
                                   r_index,
                                   input_to_output_map,
                                   non_unrolled_inputs);
+
+                /* Successfully packed? */
                 if (packed)
                 {
                     UINT64 cur_output_neuron_id;
@@ -594,14 +625,11 @@ void Clusters::random(std::vector<Neuron>& snn)
                         }
                     }
                     // std::cout << packed_neurons.size() << ": ";
-                    for (auto input : packed_neurons) 
-                    { std::cout << input << "(" << neuron_status[input].getParentId() << ") "; }
-                    if (packed_neurons.size())
-                    {
-                        std::cout << "-> " 
-                                  << cur_output_neuron_id 
-                                  << "(" << neuron_status[cur_output_neuron_id].getParentId() << ") | ";
-                    }
+                    // for (auto input : packed_neurons) 
+                    // { std::cout << input << "(" << neuron_status[input].getParentId() << ") "; }
+                    // std::cout << "-> " 
+                    //           << cur_output_neuron_id 
+                    //           << "(" << neuron_status[cur_output_neuron_id].getParentId() << ") | ";
                 }
                 // Create a new cluster it cannot be fully mapped		
                 if (non_unrolled_inputs.size() == 0) { break; }
@@ -609,7 +637,8 @@ void Clusters::random(std::vector<Neuron>& snn)
                 auto cid = addCluster();
                 num_to_pack = numCanBePacked(cid,
                                              non_unrolled_inputs);
-		
+
+                /* Prepare a list of input neurons that can be packed into the new cluster */
                 packed_neurons.clear();
                 cnt = 0;
                 for (auto &input : non_unrolled_inputs)
@@ -618,12 +647,14 @@ void Clusters::random(std::vector<Neuron>& snn)
                     packed_neurons.push_back(input);
                     cnt++;
                 }
-		
+
+                /* Pack into the new cluster */
                 packed = packToCluster(num_to_pack,
                                        snn[cur_neuron_idx].getNeuronId(),
                                        cid,
                                        input_to_output_map,
                                        non_unrolled_inputs);
+                /* Successfully packed into the new cluster */
                 if (packed)
                 {
                     UINT64 cur_output_neuron_id;
@@ -650,17 +681,14 @@ void Clusters::random(std::vector<Neuron>& snn)
                         }
                     }
 
-                    for (auto input : packed_neurons) 
-                    { std::cout << input << "(" << neuron_status[input].getParentId() << ") "; }
-                    if (packed_neurons.size())
-                    {
-                        std::cout << "-> " 
-                                  << cur_output_neuron_id 
-                                  << "(" << neuron_status[cur_output_neuron_id].getParentId() << ") | ";
-                    }
+                    // for (auto input : packed_neurons) 
+                    // { std::cout << input << "(" << neuron_status[input].getParentId() << ") "; }
+                    // std::cout << "-> " 
+                    //           << cur_output_neuron_id 
+                    //           << "(" << neuron_status[cur_output_neuron_id].getParentId() << ") | ";
                 }
             }
-            std::cout << "\n\n";
+            // std::cout << "\n\n";
             // std::cout << "Mapped neuron id: " << snn[cur_neuron_idx].getNeuronId() << "\n";
             // debugPrint();
         }
