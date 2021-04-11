@@ -265,7 +265,6 @@ class Clusters
 
         for (auto &cluster : clusters)
         {
-            /*
             UINT64 cid = cluster->getClusterId();
 
             auto outputs = cluster->getOutputsListRef();
@@ -298,7 +297,7 @@ class Clusters
                 file << cluster->getClusterId() << " "
                      << conn_cluster << " ";
                 std::set<UINT64> spike_times;
-                std::vector<UINT64> spike_times_all;
+                // std::vector<UINT64> spike_times_all;
                 for (auto output : outputs)
                 {
                     for (auto spike_time : 
@@ -306,12 +305,12 @@ class Clusters
                     {
                         // file << spike_time << " ";
                         spike_times.insert(spike_time);
-                        spike_times_all.push_back(spike_time);
+                        // spike_times_all.push_back(spike_time);
                     }
                 }
                 
-                std::sort(spike_times_all.begin(), spike_times_all.end(),
-                          [](auto &left, auto&right) {return left < right; });
+                // std::sort(spike_times_all.begin(), spike_times_all.end(),
+                //           [](auto &left, auto&right) {return left < right; });
                 for (auto spike_time : spike_times)
                 {
                     file << spike_time << " ";
@@ -319,8 +318,8 @@ class Clusters
                 
                 file << "\n";
             }
-            */
 
+            /*
             auto &io_mappings = cluster->getIOMappings();
             auto &inputs = cluster->getInputsListRef();
             for (auto input : inputs)
@@ -340,7 +339,6 @@ class Clusters
                 }
             }
 
-            /*
             UINT64 cid = cluster->getClusterId();
 
             unsigned num_inputs = cluster->getInputsListRef().size();
