@@ -9,30 +9,35 @@ if __name__ == "__main__":
     stats_dir = sys.argv[1]
     fanin = sys.argv[2]
 
-    workloads = ["LeNet", "AlexNet", "VGG16", "HeartClass", "DigitRecogMLP", "EdgeDet", "ImgSmooth", "HeartEstm", "VisualPursuit", "DigitRecogSTDP"]
-    workloads_real = ["LeNet", "AlexNet", "VGG16", "HeartClass", "MLP-MNIST", "EdgeDet", "ImgSmooth", "HeartEstm", "VisualPursuit", "RecurrentDigitRecog"]
-    techs = ["random", "min-clusters", "min-comm"]
+    workloads = ["LeNet", "AlexNet", "VGG16", "HeartClass", "MLP-MNIST", "EdgeDet", "ImgSmooth", "HeartEstm", "VisualPursuit", "RecurrentDigitRecog", "ResNet8", "DenseNet8"]
+    # workloads = ["LeNet", "AlexNet", "VGG16", "HeartClass", "DigitRecogMLP", "EdgeDet", "ImgSmooth", "HeartEstm", "VisualPursuit", "DigitRecogSTDP"]
+    workloads_real = ["LeNet", "AlexNet", "VGG16", "HeartClass", "MLP-MNIST", "EdgeDet", "ImgSmooth", "HeartEstm", "VisualPursuit", "RecurrentDigitRecog", "ResNet8", "DenseNet8"]
+    # techs = ["random", "min-clusters", "min-comm"]
+    techs = ["esl"]
 
-    total_c_file = join(fanin,"total_clusters.csv")
-    total_c_file_d = open(total_c_file, 'w')
+    info_file_d = open("cluster_info.csv", 'w')
+    # total_c_file = join(fanin,"total_clusters.csv")
+    # total_c_file_d = open(total_c_file, 'w')
 
-    avg_spikes_file = join(fanin,"avg_inter_spikes.csv")
-    avg_spikes_file_d = open(avg_spikes_file, 'w')
+    # avg_spikes_file = join(fanin,"avg_inter_spikes.csv")
+    # avg_spikes_file_d = open(avg_spikes_file, 'w')
 
-    avg_conns_file = join(fanin,"avg_connections.csv")
-    avg_conns_file_d = open(avg_conns_file, 'w')
+    # avg_conns_file = join(fanin,"avg_connections.csv")
+    # avg_conns_file_d = open(avg_conns_file, 'w')
 
-    avg_util_file = join(fanin,"avg_cluster_util.csv")
-    avg_util_file_d = open(avg_util_file, 'w')
+    # avg_util_file = join(fanin,"avg_cluster_util.csv")
+    # avg_util_file_d = open(avg_util_file, 'w')
 
     for i in range(len(workloads)):
-        total_c = [workloads[i]]
-        avg_spikes = [workloads[i]]
-        avg_conns = [workloads[i]]
-        avg_util = [workloads[i]]
- 
+        # total_c = [workloads[i]]
+        # avg_spikes = [workloads[i]]
+        # avg_conns = [workloads[i]]
+        # avg_util = [workloads[i]]
+
+        info = [workloads[i]]
+
         for j in range(len(techs)):
-            stat_file = "out/" + workloads_real[i] + "." + techs[j] + "." + fanin + ".stats.txt"
+            stat_file = join(stats_dir, workloads_real[i] + "." + techs[j] + "." + fanin + ".cluster_info.txt")
 
             num_clusters = 0
             num_conns = 0
@@ -54,17 +59,23 @@ if __name__ == "__main__":
                     num_spikes = num_spikes + int(tokens[5])
 
                     line = fp.readline()
-            total_c.append(str(num_clusters))
-            avg_spikes.append(str(math.ceil(num_spikes/num_clusters)))
-            avg_conns.append(str(math.ceil(num_conns/num_clusters)))
-            avg_util.append(str(math.ceil(num_utils/num_clusters)))
 
-        total_c_file_d.write(",".join(total_c) + "\n")
-        avg_spikes_file_d.write(",".join(avg_spikes) + "\n")
-        avg_conns_file_d.write(",".join(avg_conns) + "\n")
-        avg_util_file_d.write(",".join(avg_util) + "\n")
+            info.append(str(num_clusters))
+            info.append(str(num_conns))
+            info.append(str(num_spikes))
+            #total_c.append(str(num_clusters))
+            #avg_spikes.append(str(math.ceil(num_spikes/num_clusters)))
+            #avg_conns.append(str(math.ceil(num_conns/num_clusters)))
+            #avg_util.append(str(math.ceil(num_utils/num_clusters)))
 
-    total_c_file_d.close()
-    avg_spikes_file_d.close()
-    avg_conns_file_d.close()
-    avg_util_file_d.close()
+        info_file_d.write(",".join(info) + "\n")
+        #total_c_file_d.write(",".join(total_c) + "\n")
+        #avg_spikes_file_d.write(",".join(avg_spikes) + "\n")
+        #avg_conns_file_d.write(",".join(avg_conns) + "\n")
+        #avg_util_file_d.write(",".join(avg_util) + "\n")
+
+    info_file_d.close()
+    #total_c_file_d.close()
+    #avg_spikes_file_d.close()
+    #avg_conns_file_d.close()
+    #avg_util_file_d.close()

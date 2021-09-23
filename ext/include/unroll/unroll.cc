@@ -28,6 +28,30 @@ Model::Model(const std::string& connection_file_name,
 
     readConnections(connection_file_name);
 
+    typedef boost::tokenizer<boost::char_separator<char>> tok_t;
+    boost::char_separator<char> sep(".", "", boost::keep_empty_tokens);
+    tok_t tok(connection_file_name, sep);
+    std::cout << *(tok.begin()) << ",";
+
+    UINT64 total_neurons = 0;
+    UINT64 total_in = 0;
+    UINT64 total_out = 0;
+    boost::multiprecision::cpp_int total_spike = 0;
+    for (auto &neu : snn)
+    {
+        total_neurons += 1;
+        total_spike += neu.numOfSpikes();
+        total_in += neu.numInputNeurons();
+        total_out += neu.numOutputNeurons();
+    }
+
+    std::cout << total_neurons << ","
+              << total_in << ","
+              << total_spike << ","
+              << total_out << std::endl;
+
+    // exit(0);
+
     // Initialize all the spike information
     // for (auto &neuron : snn)
     // for (auto i = 0; i < snn.size(); i++)
@@ -107,8 +131,11 @@ void Model::readSpikes(const std::string& spike_file)
             spike_times.push_back(spike);
         }
 
-        assert(source_neuron < snn.size());
-        snn[source_neuron].setNumSpikes(spike_times.size());
+        // assert(source_neuron < snn.size());
+        if (source_neuron < snn.size())
+        {
+            snn[source_neuron].setNumSpikes(spike_times.size());
+        }
     }
     file.close();
 }
@@ -126,7 +153,7 @@ void Model::readConnections(const std::string &connection_file_name)
     {
         UINT64 source_neuron;
         tok_t tok(line, sep);
-        std::vector<UINT64> out_neuron_list;
+        std::set<UINT64> out_neuron_list;
         bool first = true;
         for (tok_t::iterator i = tok.begin(); i != tok.end(); ++i)
         {
@@ -142,13 +169,13 @@ void Model::readConnections(const std::string &connection_file_name)
             }
 
             UINT64 out_neuron = std::stoull(*i);
-            out_neuron_list.push_back(out_neuron);
+            out_neuron_list.insert(out_neuron);
         }
 
-        for (auto i = 0; i < out_neuron_list.size(); i++)
+	for (auto out : out_neuron_list)
         {
-            snn[source_neuron].addOutputNeuron(out_neuron_list[i]);
-            snn[out_neuron_list[i]].addInputNeuron(source_neuron);
+            snn[source_neuron].addOutputNeuron(out);
+            snn[out].addInputNeuron(source_neuron);
         }
     }
     file.close();
@@ -180,8 +207,17 @@ void Model::unroll()
         // Check if the number of inputs exceed max_fanin
         if (input_neurons_copy.size() > max_fanin)
         {
-            // std::cout << "\nUnrolling neuron id: "
-            //           << usnn[idx].getNeuronId() << "\n";
+            // std::cerr << "Max. fanin: " << max_fanin << std::endl;
+            // std::cerr << "Unrolling neuron id: "
+            //           << usnn[idx].getNeuronId() << std::endl;
+            // std::cerr << "Num. input neurons: " << input_neurons_copy.size() << std::endl;
+            // unsigned cnt = 1;
+            // for (auto &input_neuron : input_neurons_copy)
+            // {
+            //     std::cerr << input_neuron << " ";
+            //     if (cnt++ % 16 == 0) std::cerr << std::endl;
+            // }
+            // std::cerr << std::endl << std::endl;
 
             // Step one, reset the output neuron of all the input neurons
             for (auto &input_neuron : input_neurons_copy)
@@ -226,7 +262,12 @@ void Model::unroll()
 
                         usnn[cur_unrolling_neuron_id].getInputNeuronList().push_back(
                             input_neurons_copy[i]);
+
+                        // std::cerr << input_neurons_copy[i] << " -> " 
+                        //           << cur_unrolling_neuron_id << " | ";
                     }
+
+                    // std::cerr << std::endl << std::endl;
 
                     usnn[cur_unrolling_neuron_id].setNumSpikes(total_spikes);
                     usnn[cur_unrolling_neuron_id].setParentId(usnn[idx].getNeuronId());
@@ -242,6 +283,9 @@ void Model::unroll()
 
                     // boost::multiprecision::cpp_int total_spikes = 
                     //     usnn[prev_unrolling_neuron_id].numOfSpikes();
+
+                    // std::cerr << prev_unrolling_neuron_id << " -> "
+                    //           << usnn[idx].getNeuronId() << " | ";
 
                     for (auto i = max_fanin + (inter_neu_idx - 1) * (max_fanin - 1);
                               i < num_inputs;
@@ -260,7 +304,12 @@ void Model::unroll()
 
                         usnn[usnn[idx].getNeuronId()].getInputNeuronList().push_back(
                             input_neurons_copy[i]);
+			
+                        // std::cerr << input_neurons_copy[i] << " -> "
+                        //           << usnn[idx].getNeuronId() << " | ";
+
                     }
+                    // std::cerr << std::endl << std::endl;
                     // usnn[usnn[idx].getNeuronId()].setNumSpikes(total_spikes);
                 }
                 else
@@ -271,6 +320,9 @@ void Model::unroll()
                         cur_unrolling_neuron_id);
                     usnn[cur_unrolling_neuron_id].getInputNeuronList().push_back(
                         prev_unrolling_neuron_id);
+
+                    // std::cerr << prev_unrolling_neuron_id << " -> "
+                    //           << cur_unrolling_neuron_id << " | ";
 
                     boost::multiprecision::cpp_int total_spikes = 
                         usnn[prev_unrolling_neuron_id].numOfSpikes();
@@ -292,7 +344,12 @@ void Model::unroll()
 
                         usnn[cur_unrolling_neuron_id].getInputNeuronList().push_back(
                             input_neurons_copy[i]);
+
+                        // std::cerr << input_neurons_copy[i] << " -> "
+                        //           << cur_unrolling_neuron_id << " | ";
                     }
+
+                    // std::cerr << std::endl << std::endl;
 
                     usnn[cur_unrolling_neuron_id].setNumSpikes(total_spikes);
                     usnn[cur_unrolling_neuron_id].setParentId(usnn[idx].getNeuronId());
@@ -302,6 +359,7 @@ void Model::unroll()
                     cur_unrolling_neuron_id++;
                 }
             }
+            // if (input_neurons_copy.size() > 256) exit(0);
         }
     }
     // for (auto &neuron : usnn) { neuron.print_connections(); } exit(0);

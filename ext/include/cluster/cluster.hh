@@ -257,6 +257,7 @@ class Clusters
 
         for (auto &cluster : clusters)
         {
+            
             auto &io_mappings = cluster->getIOMappings();
             auto &inputs = cluster->getInputsListRef();
             for (auto input : inputs)
@@ -275,7 +276,8 @@ class Clusters
                          << neuron_status[output].getParentId() << "\n";
                 }
             }
-            /*
+            
+/*            
             UINT64 cid = cluster->getClusterId();
 
             unsigned num_inputs = cluster->getInputsListRef().size();
@@ -303,8 +305,7 @@ class Clusters
                  << num_synapses << " "
                  << num_conns << " "
                  << total_spikes_in << " "
-                 << total_spikes_out << "\n";
-            */
+                 << total_spikes_out << "\n"; */
         }
 
         file.close();

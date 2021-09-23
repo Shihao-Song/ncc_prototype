@@ -121,6 +121,7 @@ void Clusters::minClusters(std::vector<Neuron>& snn)
                     cnt++;
                 }
 
+                unsigned checker = non_unrolled_inputs.size();
                 /* Pack the input neurons to the cluster */
                 bool packed = packToCluster(num_to_pack,
                                   snn[cur_neuron_idx].getNeuronId(),
@@ -131,6 +132,11 @@ void Clusters::minClusters(std::vector<Neuron>& snn)
                 /* Successfully packed to the cluster */
                 if (packed)
                 {
+                    // std::cerr << snn[cur_neuron_idx].numInputNeurons() << " " 
+                    //           << checker << " " 
+                    //           << num_to_pack << " " 
+                    //           << non_unrolled_inputs.size() << std::endl;
+
                     /* Get the output neuron which the input neurons connect to */
                     UINT64 cur_output_neuron_id;
                     if (non_unrolled_inputs.size() > 0)
@@ -177,6 +183,7 @@ void Clusters::minClusters(std::vector<Neuron>& snn)
                 auto cid = addCluster();
                 unsigned num_to_pack = numCanBePacked(cid,
                                                       non_unrolled_inputs);
+                // std::cerr << non_unrolled_inputs.size() << " " << num_to_pack << std::endl; exit(0);
 
                 /* Prepare a list of input neurons that can be packed */
                 std::vector<UINT64> packed_neurons;
@@ -198,6 +205,8 @@ void Clusters::minClusters(std::vector<Neuron>& snn)
                 /* Successfully packed to the cluster */
                 if (packed)
                 {
+                    // std::cerr << "[DEBUG] "
+
                     /* Get the output neuron which the input neurons connect to */
                     UINT64 cur_output_neuron_id;
                     if (non_unrolled_inputs.size() > 0)
