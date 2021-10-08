@@ -15,6 +15,7 @@ class Argument
 
     std::string cluster_ir_output = "N/A";
     std::string cluster_stats = "N/A";
+    std::string cluster_conn_stats = "N/A";
 
     unsigned unrolled_fanin = INVALID;
     unsigned crossbar_size = INVALID;
@@ -68,6 +69,11 @@ class Argument
     {
         bool valid = (cluster_stats != "N/A") ? true : false;
         return std::pair<bool,std::string&>(valid,cluster_stats);
+    }
+    std::pair<bool,std::string&> getClusterConnStatsFile()
+    {
+        bool valid = (cluster_conn_stats != "N/A") ? true : false;
+        return std::pair<bool,std::string&>(valid,cluster_conn_stats);
     }
 };
 }

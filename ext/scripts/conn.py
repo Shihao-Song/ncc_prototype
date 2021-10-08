@@ -3,6 +3,9 @@ from os import listdir
 from os.path import isfile, join
 from collections import deque
 
+###### PURPOSE OF SCRIPT ######################################
+# Return connected components as lists of nodes (for each cc) #
+###############################################################
 class Graph:
  
     # init function to declare class variables
@@ -73,6 +76,8 @@ if __name__ == "__main__":
     for cluster_ir in cluster_irs:
         max_cid = 0
         print (cluster_ir)
+        
+        #Find largest cluster ID (max_cid)
         with open(join(cluster_ir_dir,cluster_ir)) as fp:
             line = fp.readline()
             while line:

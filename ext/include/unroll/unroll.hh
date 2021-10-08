@@ -63,7 +63,7 @@ class Neuron
         boost::multiprecision::cpp_int ori = num_spikes; 
         num_spikes += _spike;
         if (num_spikes < ori)
-	{ 
+	      { 
             std::cerr << "addNumSpikesFromOneInput: overflow detected." << std::endl;
             exit(0);
         }
@@ -185,7 +185,7 @@ class Model
   public:
     void clustering(std::string &mode,unsigned);
     void printClusterIR(std::string &_out);
-    void printClusterStats(std::string &_out);
+    void printClusterStats(std::string &_out, int mode);
 };
 }
 }

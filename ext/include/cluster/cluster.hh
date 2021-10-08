@@ -14,8 +14,9 @@
 #include <vector>
 
 // #include <boost/functional/hash.hpp>
-
+#include "util/histogram.hh"
 #include "unroll/unroll.hh"
+
 
 // Performance consideration:
 // std::set should be enough since the number of elements is not significant
@@ -27,6 +28,12 @@ namespace EXT
 namespace Clustering
 {
 typedef uint64_t UINT64;
+enum{
+    NUM_CONNECTIONS  = 1,
+    NEURON_SPECIFIC  = 2,
+//    ALL              = 3,
+    CONNECTION_SUMMARY = 4,
+    };
 
 const UINT64 INVALID_ID = (UINT64) - 1;
 
@@ -250,62 +257,112 @@ class Clusters
         }
         file.close();
     }
-    void printClusterStats(std::string &_out)
+    void printClusterStats(std::string &_out, int mode)
     {
         std::fstream file;
         file.open(_out, std::fstream::out);
 
+        std::vector<int> net_num_conn_in;
+        std::vector<int> net_num_conn_out;
+
+        unsigned min_num_conn_in = UINT32_MAX;
+        unsigned max_num_conn_in = 0;
+        unsigned total_num_conn_in = 0;
+
+        unsigned min_num_conn_out = UINT32_MAX;
+        unsigned max_num_conn_out = 0;
+        unsigned total_num_conn_out = 0;
+
         for (auto &cluster : clusters)
         {
-            
-            auto &io_mappings = cluster->getIOMappings();
-            auto &inputs = cluster->getInputsListRef();
-            for (auto input : inputs)
-            {
-                auto output_iter = io_mappings.find(input);
-                // std::cout << input << "\n";
-                assert(output_iter != io_mappings.end());
-                auto &outputs = output_iter->second;
-                for (auto output : outputs)
+            if (mode & NEURON_SPECIFIC) {
+                auto &io_mappings = cluster->getIOMappings();
+                auto &inputs = cluster->getInputsListRef();
+                for (auto input : inputs)
                 {
-                    file << cluster->getClusterId() << " "
-                         << input << " "
-                         << output << " "
-                         << neuron_status[input].numOfSpikes() << " "
-                         << neuron_status[input].getParentId() << " "
-                         << neuron_status[output].getParentId() << "\n";
-                }
-            }
-            
-/*            
-            UINT64 cid = cluster->getClusterId();
-
-            unsigned num_inputs = cluster->getInputsListRef().size();
-            unsigned num_outputs = cluster->getOutputsListRef().size();
-            unsigned num_synapses = cluster->numSynapses();
-            unsigned num_conns = 0;
-            boost::multiprecision::cpp_int total_spikes_in = cluster->numOfSpikesIn();
-            boost::multiprecision::cpp_int total_spikes_out = 0;
-
-            for (auto &conn_cluster : cluster->getConnectedClustersOutRef())
-            {
-                boost::multiprecision::cpp_int ori = total_spikes_out;
-                num_conns++;
-                total_spikes_out += cluster->numOfSpikesOut(conn_cluster);
-                if (total_spikes_out < ori)
-                {
-                    std::cerr << "printClusterStats: overflow detected." << std::endl;
-                    exit(0);
+                    auto output_iter = io_mappings.find(input);
+                    // std::cout << input << "\n";
+                    assert(output_iter != io_mappings.end());
+                    auto &outputs = output_iter->second;
+                    for (auto output : outputs)
+                    {
+                        file << cluster->getClusterId() << " "
+                            << input << " "
+                            << output << " "
+                            << neuron_status[input].numOfSpikes() << " "
+                            << neuron_status[input].getParentId() << " "
+                            << neuron_status[output].getParentId() << "\n";
+                    }
                 }
             }
 
-            file << cid << " " 
-                 << num_inputs << " " 
-                 << num_outputs << " " 
-                 << num_synapses << " "
-                 << num_conns << " "
-                 << total_spikes_in << " "
-                 << total_spikes_out << "\n"; */
+            if ((mode & NUM_CONNECTIONS) | (mode & CONNECTION_SUMMARY)) {
+                UINT64 cid = cluster->getClusterId();
+
+                unsigned num_inputs = cluster->getInputsListRef().size();
+                unsigned num_outputs = cluster->getOutputsListRef().size();
+                unsigned num_synapses = cluster->numSynapses();
+                unsigned num_conns = 0;
+                boost::multiprecision::cpp_int total_spikes_in = cluster->numOfSpikesIn();
+                boost::multiprecision::cpp_int total_spikes_out = 0;
+
+                for (auto &conn_cluster : cluster->getConnectedClustersOutRef())
+                {
+                    boost::multiprecision::cpp_int ori = total_spikes_out;
+                    num_conns++;
+                    total_spikes_out += cluster->numOfSpikesOut(conn_cluster);
+                    if (total_spikes_out < ori)
+                    {
+                        std::cerr << "printClusterStats: overflow detected." << std::endl;
+                        exit(0);
+                    }
+                }
+
+                min_num_conn_in = std::min(num_inputs, min_num_conn_in);
+                max_num_conn_in = std::max(num_inputs, max_num_conn_in);
+                min_num_conn_out = std::min(num_outputs, min_num_conn_out);
+                max_num_conn_out = std::max(num_outputs, max_num_conn_out);
+                total_num_conn_in += num_inputs;
+                total_num_conn_out += num_outputs;
+                net_num_conn_in.push_back(num_inputs);
+                net_num_conn_out.push_back(num_outputs);
+
+                if (!(mode & CONNECTION_SUMMARY)) {
+                    file << cid << " " 
+                        << num_inputs << " "      // Number of input neuron connections
+                        << num_outputs << " "     // Number of output neuron connections 
+                        << num_synapses << " "    // Number of synapses within the cluster?????
+                        << num_conns << " "       // Number of clusters that this current cluster have 
+                                                // at least 1 neuron connection to
+                        << total_spikes_in << " " //total number of spikes coming in via all of
+                                                // the connections into this cluster
+                        << total_spikes_out << " "
+                        << "XXXX"           << "\n"; // similar but out direction
+                }
+            }
+        }
+
+        if (mode & CONNECTION_SUMMARY) {
+            file << "Minimum fanin of all clusters: " << min_num_conn_in << "\n"
+                    << "Maximum fanin of all clusters: " << max_num_conn_in << "\n"
+                    << "Minimum fanout of all clusters: " << min_num_conn_out << "\n"
+                    << "Minimum fanout of all clusters: " << max_num_conn_out << "\n"
+                    << "Average fanin of all clusters: " << total_num_conn_in/clusters.size() << "\n"
+                    << "Average fanout of all clusters: " << total_num_conn_out/clusters.size() << "\n";
+
+            //Print histogram in csv
+            file << "                                           " << "\n";
+            std::sort(net_num_conn_in.begin(), net_num_conn_in.end());
+            std::sort(net_num_conn_out.begin(), net_num_conn_out.end());
+            std::map<int, int> inConnectFreq = binning(net_num_conn_in);
+            std::map<int, int> outConnectFreq = binning(net_num_conn_out);
+            
+            file << "Frequency of input connections of all clusters: " << "\n";
+            for (auto i : inConnectFreq)
+                file << i.first << ", " << i.second << "\n";
+            file << "Frequency of output connections of all clusters: " << "\n";
+            for (auto i : inConnectFreq)
+                file << i.first << ", " << i.second << "\n";
         }
 
         file.close();

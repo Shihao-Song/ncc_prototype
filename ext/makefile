@@ -1,15 +1,18 @@
 SOURCE  := main.cc
 SOURCE  += $(shell find include/ -name "*.cc")
 CC      := g++
-FLAGS   := -O3 -std=c++17 -w -I include
-LD      := -lboost_program_options -ltbb -lpthread
+FLAGS   := -std=c++17 -w -I include
+LD      := -lboost_program_options #-ltbb -lpthread
 TARGET  := ext
-#OUT	:= out
+OUT	:= out
 
 all: $(TARGET)
 
+debug: $(SOURCE)
+	$(CC) -g $(FLAGS) $(SOURCE) -o $(TARGET) $(LD)
+
 $(TARGET): $(SOURCE)
-	$(CC) $(FLAGS) $(SOURCE) -o $(TARGET) $(LD)
+	$(CC) -O3 $(FLAGS) $(SOURCE) -o $(TARGET) $(LD)
 
 clean:
 	rm -f $(TARGET)

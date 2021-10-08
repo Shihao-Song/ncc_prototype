@@ -26,7 +26,9 @@ Argument::Argument(int argc, char **argv)
         ("unroll-parent-out", po::value<std::string>(&unrolled_parent_output),
                    "Unrolled parent neurons output file")
         ("cluster-stats", po::value<std::string>(&cluster_stats),
-                   "Clustering stats")
+                   "Clustering stats of which clusters connect to which")
+        ("cluster-conn-stats", po::value<std::string>(&cluster_conn_stats),
+                   "Clustering raw stats of number of connections")
         ("cluster-ir-out", po::value<std::string>(&cluster_ir_output),
                    "Clustering IR output file");
 

@@ -1,5 +1,6 @@
 #include "util/args.hh"
 #include "unroll/unroll.hh"
+#include "cluster/cluster.hh"
 
 typedef EXT::Argument Argument;
 typedef EXT::Unrolling::Model Model;
@@ -58,7 +59,16 @@ int main(int argc, char **argv)
     if (auto [valid, cluster_stats] = args.getClusterStatsFile(); valid)
     {
         // std::cout << cluster_stats << "\n";
-        model.printClusterStats(cluster_stats);
+        int mode = EXT::Clustering::NEURON_SPECIFIC;
+        model.printClusterStats(cluster_stats, mode);
+    }
+
+    if (auto [valid, cluster_conn_stats] = args.getClusterConnStatsFile(); valid)
+    {
+        std::cout << "Printing cluster connection stats\n"; 
+        int mode = EXT::Clustering::NUM_CONNECTIONS;
+        mode = mode | EXT::Clustering::CONNECTION_SUMMARY;
+        model.printClusterStats(cluster_conn_stats, mode);
     }
     
     return 0;

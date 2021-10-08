@@ -412,11 +412,11 @@ void Model::printClusterIR(std::string &_out)
     real_clusters->printClusterIR(_out);
 }
 
-void Model::printClusterStats(std::string &_out)
+void Model::printClusterStats(std::string &_out, int mode)
 {
     if (clusters == nullptr) { return; }
     Clusters* real_clusters = static_cast<Clusters*>(clusters);	
-    real_clusters->printClusterStats(_out);
+    real_clusters->printClusterStats(_out, mode);
 }
 }
 }

@@ -4,6 +4,11 @@ from os.path import isfile, join
 from collections import deque
 import math
 
+###### PURPOSE OF SCRIPT ######################################
+# Parse cluser_info.txt and write out to csv format           #
+###############################################################
+
+
 # Driver Code
 if __name__ == "__main__":
     stats_dir = sys.argv[1]
